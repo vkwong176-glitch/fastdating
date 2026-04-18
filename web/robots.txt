@@ -1,0 +1,5 @@
+# 允許搜尋引擎檢索（可於 Google Search Console 提交網址與 sitemap）
+User-agent: *
+Allow: /
+
+Sitemap: https://fastdating1.com/sitemap.xml

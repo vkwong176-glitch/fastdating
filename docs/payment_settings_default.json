@@ -1,0 +1,8 @@
+{
+  "enableIap": true,
+  "enableStripe": false,
+  "enableManual": true,
+  "stripePublishableKey": "",
+  "stripeCheckoutUrls": {},
+  "stripePriceIds": {}
+}

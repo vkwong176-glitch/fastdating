@@ -1,0 +1,63 @@
+name: fastdating
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  provider: ^6.1.1
+  flutter_slidable: ^3.1.0
+  intl: ^0.20.2
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+  image_picker: ^1.0.7
+  camera: ^0.12.0
+  record: ^5.0.4
+  audioplayers: ^6.1.0
+  file_picker: ^8.1.4
+  open_file: ^3.5.10
+  path: ^1.9.0
+  path_provider: ^2.1.0
+  shared_preferences: ^2.2.0
+  url_launcher: ^6.3.0
+  http: ^1.2.0
+  geolocator: ^13.0.2
+  firebase_core: ^4.5.0
+  cloud_functions: ^6.1.0
+  firebase_auth: ^6.2.0
+  cloud_firestore: ^6.1.3
+  firebase_messaging: ^16.1.2
+  in_app_purchase: ^3.2.3
+  google_sign_in: ^7.2.0
+  sign_in_with_apple: ^7.0.1
+  crypto: ^3.0.7
+  web: ^1.1.1
+  image: ^4.5.4
+  pdf: ^3.12.0
+  printing: ^5.14.3
+  firebase_storage: ^13.2.0
+  go_router: ^17.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/legal/privacy_zh_hk.txt
+    - assets/legal/user_terms_zh_hk.txt
+    - assets/images/branding_love_banner.webp
+    - assets/images/subscription_pointing_hand.webp
+    - assets/images/wechat_pay_qr.png
+    - assets/images/wechat_pay_qr_cny.png
+    - assets/images/whatsapp_logo.png

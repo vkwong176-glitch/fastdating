@@ -1,0 +1,101 @@
+# =============================================================================
+# Fast Dating：Git 根目錄在「使用者家目錄」時，只納入 Flutter／Firebase 專案檔
+# =============================================================================
+# 原理：先忽略根目錄下所有頂層項目（/*），再以 ! 取消忽略要追蹤的路徑。
+# 若之後改為「獨立專案資料夾」當 repo 根目錄，可刪除下方「白名單」整段，
+# 改用最底下「一般 Flutter」區塊即可。
+#
+# 若曾經 git add 過 Desktop、Library 等，需從索引移除（不刪本機檔）：
+#   git rm -r --cached Desktop Documents Downloads Library Movies Music Pictures
+#   （依實際誤加路徑調整；執行前建議先 git status / git ls-files 確認）
+# =============================================================================
+
+# ----- 白名單：根目錄僅追蹤下列路徑 -----
+/*
+!.gitignore
+
+# Flutter／Dart
+!/pubspec.yaml
+!/pubspec.lock
+!/analysis_options.yaml
+!/.metadata
+!/README.md
+
+!/lib/
+!/lib/**
+
+!/test/
+!/test/**
+
+!/docs/
+!/docs/**
+
+!/web/
+!/web/**
+
+!/android/
+!/android/**
+
+!/ios/
+!/ios/**
+
+!/macos/
+!/macos/**
+
+!/windows/
+!/windows/**
+
+!/linux/
+!/linux/**
+
+# Firebase／部署
+!/firebase.json
+!/.firebaserc
+!/firestore.rules
+!/firestore.indexes.json
+!/storage.rules
+!/run_web.sh
+
+# 靜態資源（若專案有）
+!/assets/
+!/assets/**
+
+# ----- 在已追蹤樹狀目錄內，仍排除建置產物與快取 -----
+**/build/
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+
+# ----- 一般開發雜項（與白名單並存）-----
+node_modules/
+dist/
+.env
+.env.*
+.DS_Store
+tmp/
+temp/
+.cache/
+.idea/
+.vscode/
+*.log
+
+# 若將 FASTDATING_BACKUP_DIR 設在專案目錄內
+backups/
+
+# 本機備份目錄（勿提交）
+lib_backup/
+fastdating_old/
+
+# 根目錄「點」開頭路徑（Git 的 /* 常不涵蓋這些，務必明確忽略）
+/.cursor/
+/.dart-tool/
+/.dartServer/
+/.pub-cache/
+/.flutter
+/.zsh_history
+/.zsh_sessions/
+/.CFUserTextEncoding
+/.config/
+/.cups/

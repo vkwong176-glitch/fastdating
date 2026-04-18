@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(self)">
+
+  <!-- SEO：Google／Yahoo 等搜尋引擎會讀取下列標題與摘要（實際排序與摘要長度由搜尋引擎決定） -->
+  <title>Fast Dating｜Speed Dating 單身配對・多元交友平台</title>
+  <meta name="description" content="Fast dating 平台是HK LOVE EASY升級版，目的是讓單身人士在繁忙的日子裏，抽空認識新朋友，擴闊社交圈子，為生活帶來一點樂趣及減壓的作用.平台上功能豐富：有條件篩選配對，附近的人配對，活動推送，平台聊天功能，可以24hrs隨心聊天，認識新朋友.歡迎大家進入平台約會聊天">
+  <meta name="keywords" content="Fast dating,Hk Love easy,speed dating,Single">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://fastdating1.com/">
+  <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml">
+
+  <!-- Open Graph（分享連結／部分搜尋結果參考） -->
+  <meta property="og:site_name" content="Fast Dating">
+  <meta property="og:title" content="Fast Dating｜Speed Dating 單身配對・多元交友平台">
+  <meta property="og:description" content="Fast dating 平台是HK LOVE EASY升級版，目的是讓單身人士在繁忙的日子裏，抽空認識新朋友，擴闊社交圈子，為生活帶來一點樂趣及減壓的作用.平台上功能豐富：有條件篩選配對，附近的人配對，活動推送，平台聊天功能，可以24hrs隨心聊天，認識新朋友.歡迎大家進入平台約會聊天">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://fastdating1.com/">
+  <meta property="og:image" content="https://fastdating1.com/favicon.png">
+  <meta property="og:locale" content="zh_HK">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Fast Dating｜Speed Dating 單身配對・多元交友平台">
+  <meta name="twitter:description" content="Fast dating 平台是HK LOVE EASY升級版，目的是讓單身人士在繁忙的日子裏，抽空認識新朋友，擴闊社交圈子，為生活帶來一點樂趣及減壓的作用.平台上功能豐富：有條件篩選配對，附近的人配對，活動推送，平台聊天功能，可以24hrs隨心聊天，認識新朋友.歡迎大家進入平台約會聊天">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Fast Dating">
+  <link rel="apple-touch-icon" href="icons/fd-icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png"/>
+  <link rel="shortcut icon" type="image/png" href="favicon.png"/>
+
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <!-- 解除舊版 Service Worker，否則瀏覽器可能持續執行舊 main.dart.js（版面與管理員登入不會更新） -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function (regs) {
+        for (var i = 0; i < regs.length; i++) regs[i].unregister();
+      });
+    }
+  </script>
+  <!--
+    You can customize the "flutter_bootstrap.js" script.
+    This is useful to provide a custom configuration to the Flutter loader
+    or to give the user feedback during the initialization process.
+
+    For more details:
+    * https://docs.flutter.dev/platform-integration/web/initialization
+  -->
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

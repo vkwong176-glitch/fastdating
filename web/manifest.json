@@ -1,0 +1,35 @@
+{
+    "name": "Fast Dating｜HK LOVE EASY 升級版",
+    "short_name": "Fast Dating",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#FF7F50",
+    "theme_color": "#FF7F50",
+    "description": "Fast dating 平台是HK LOVE EASY升級版，目的是讓單身人士在繁忙的日子裏，抽空認識新朋友，擴闊社交圈子，為生活帶來一點樂趣及減壓的作用.平台上功能豐富：有條件篩選配對，附近的人配對，活動推送，平台聊天功能，可以24hrs隨心聊天，認識新朋友.歡迎大家進入平台約會聊天.",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/fd-icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/fd-icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/fd-icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/fd-icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
