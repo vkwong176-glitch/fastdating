@@ -118,12 +118,13 @@ class _MessagePageState extends State<MessagePage> {
     required List<Map<String, dynamic>> real,
     required String uid,
   }) {
-    if (_genderForDemo == null) return List<Map<String, dynamic>>.from(real);
+    final sortedReal = _sortChatsByUnreadThenTime(real);
+    if (_genderForDemo == null) return sortedReal;
     final demo = getRandomOppositeSexChatList(
       myGender: _genderForDemo!,
       seed: uid.hashCode,
     );
-    return [...real, ...demo];
+    return [...sortedReal, ..._sortChatsByUnreadThenTime(demo)];
   }
 
   List<Map<String, dynamic>> _mergePromotionAdsIntoChats(
@@ -270,6 +271,31 @@ class _MessagePageState extends State<MessagePage> {
     if (u is int) return u;
     if (u is num) return u.toInt();
     return 0;
+  }
+
+  int _chatSortMs(Map<String, dynamic> item) {
+    final lastMs = item['lastMessageAtMs'];
+    if (lastMs is int) return lastMs;
+    if (lastMs is num) return lastMs.toInt();
+    final fallbackMs = item['firestoreListMs'];
+    if (fallbackMs is int) return fallbackMs;
+    if (fallbackMs is num) return fallbackMs.toInt();
+    return 0;
+  }
+
+  List<Map<String, dynamic>> _sortChatsByUnreadThenTime(
+    List<Map<String, dynamic>> chats,
+  ) {
+    final sorted = List<Map<String, dynamic>>.from(chats);
+    sorted.sort((a, b) {
+      final unreadA = _unreadCount(a) > 0;
+      final unreadB = _unreadCount(b) > 0;
+      if (unreadA != unreadB) {
+        return unreadA ? -1 : 1;
+      }
+      return _chatSortMs(b).compareTo(_chatSortMs(a));
+    });
+    return sorted;
   }
 
   Widget _buildConversationListView({

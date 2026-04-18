@@ -59,22 +59,25 @@ class MainTabAppBar extends StatelessWidget implements PreferredSizeWidget {
     required IconData icon,
     required String tooltip,
   }) {
-    return IconButton(
-      onPressed: onPressed,
-      tooltip: tooltip,
-      icon: Container(
-        width: actionButtonSize,
-        height: actionButtonSize,
-        decoration: const BoxDecoration(
-          color: AppConstants.primaryColor,
-          shape: BoxShape.circle,
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTap: onPressed,
+        child: SizedBox(
+          width: actionButtonSize,
+          height: actionButtonSize,
+          child: Container(
+            width: actionButtonSize,
+            height: actionButtonSize,
+            decoration: const BoxDecoration(
+              color: AppConstants.primaryColor,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.white, size: actionIconSize),
+          ),
         ),
-        child: Icon(icon, color: Colors.white, size: actionIconSize),
-      ),
-      style: IconButton.styleFrom(
-        enableFeedback: false,
-        padding: EdgeInsets.zero,
-        minimumSize: const Size(actionButtonSize, actionButtonSize),
       ),
     );
   }
@@ -82,14 +85,19 @@ class MainTabAppBar extends StatelessWidget implements PreferredSizeWidget {
   static Widget buildHomeLeadingButton({
     VoidCallback? onPressed,
   }) {
-    return IconButton(
-      onPressed: onPressed,
-      tooltip: '首頁',
-      icon: const Icon(Icons.home_outlined, size: 31.2),
-      style: IconButton.styleFrom(
-        enableFeedback: false,
-        padding: EdgeInsets.zero,
-        minimumSize: const Size(40, 40),
+    return Tooltip(
+      message: '首頁',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTap: onPressed,
+        child: const SizedBox(
+          width: 40,
+          height: 40,
+          child: Center(
+            child: Icon(Icons.home_outlined, size: 31.2),
+          ),
+        ),
       ),
     );
   }

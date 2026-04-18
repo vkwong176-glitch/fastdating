@@ -13,6 +13,22 @@ import 'chat_quota_gate.dart';
 class BottomNavBar extends StatelessWidget {
   const BottomNavBar({super.key});
 
+  Future<void> _handleTap(
+    BuildContext context,
+    NavProvider navProvider,
+    int index,
+  ) async {
+    if ((index == 1 || index == 4) && navProvider.currentIndex != index) {
+      final ok = await ensureChatQuotaBeforeEnterChatArea(context);
+      if (!context.mounted || !ok) return;
+    }
+    if (kIsWeb) {
+      context.go(mainTabPathForIndex(index));
+      return;
+    }
+    navProvider.setCurrentIndex(index);
+  }
+
   @override
   Widget build(BuildContext context) {
     // 獲取狀態管理實例
@@ -42,41 +58,61 @@ class BottomNavBar extends StatelessWidget {
       {'icon': Icons.near_me, 'label': langProvider.getString('nearby')},
     ];
 
-    return BottomNavigationBar(
-      currentIndex: navProvider.currentIndex,
-      onTap: (index) async {
-        if ((index == 1 || index == 4) && navProvider.currentIndex != index) {
-          final ok = await ensureChatQuotaBeforeEnterChatArea(context);
-          if (!context.mounted) return;
-          if (!ok) return;
-        }
-        if (kIsWeb) {
-          context.go(mainTabPathForIndex(index));
-          return;
-        }
-        navProvider.setCurrentIndex(index);
-      },
-      // 生成導航選項
-      items: navItems
-          .map((item) => BottomNavigationBarItem(
-                icon: Icon(
-                  item['icon'] as IconData,
-                  // 選中項圖標放大；手機版整體縮 0.1cm
-                  size: navItems.indexOf(item) == navProvider.currentIndex
-                      ? iconSelected
-                      : iconUnselected,
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: AppConstants.footerBarBackground,
+        border: Border(
+          top: BorderSide(color: Color(0x14000000)),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: isMobile ? 64 : 70,
+          child: Row(
+            children: List.generate(navItems.length, (index) {
+              final item = navItems[index];
+              final selected = index == navProvider.currentIndex;
+              final color = selected
+                  ? AppConstants.primaryColor
+                  : const Color(0xFF212121);
+              final iconSize = selected ? iconSelected : iconUnselected;
+              return Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  excludeFromSemantics: true,
+                  onTap: () => _handleTap(context, navProvider, index),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          item['icon'] as IconData,
+                          size: iconSize,
+                          color: color,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          item['label'] as String,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: labelFontSize,
+                            color: color,
+                            fontWeight:
+                                selected ? FontWeight.w600 : FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                label: item['label'] as String,
-              ))
-          .toList(),
-      // 樣式配置
-      selectedItemColor: AppConstants.primaryColor, // 選中項橙色
-      unselectedItemColor: const Color(0xFF212121), // 未選中項：深黑字與圖標
-      type: BottomNavigationBarType.fixed, // 固定所有選項（5個不折疊）
-      enableFeedback: false,
-      selectedFontSize: labelFontSize,
-      unselectedFontSize: labelFontSize,
-      backgroundColor: AppConstants.footerBarBackground,
+              );
+            }),
+          ),
+        ),
+      ),
     );
   }
 }
