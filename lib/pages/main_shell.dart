@@ -24,7 +24,6 @@ import '../widgets/chat_invite_popup_host.dart';
 import '../widgets/feed_heart_inbox_host.dart';
 import '../widgets/subscription_expiry_sound_host.dart';
 import '../services/firebase_bootstrap.dart';
-import '../services/in_app_notification_sound.dart';
 import '../services/manual_subscription_billing_service.dart';
 import '../services/screen_capture_platform.dart';
 import '../widgets/cookie_consent_banner.dart';
@@ -191,25 +190,19 @@ class _MainShellState extends State<MainShell> {
             ),
           );
 
-    return Listener(
-      behavior: HitTestBehavior.translucent,
-      onPointerDown: (_) {
-        InAppNotificationSound.instance.onUserPointerDown();
-      },
-      child: Stack(
-        children: [
-          boundedShell,
-          const ChatInvitePopupHost(),
-          const FeedHeartInboxHost(),
-          const SubscriptionExpirySoundHost(),
-          const Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: CookieConsentBanner(),
-          ),
-        ],
-      ),
+    return Stack(
+      children: [
+        boundedShell,
+        const ChatInvitePopupHost(),
+        const FeedHeartInboxHost(),
+        const SubscriptionExpirySoundHost(),
+        const Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: CookieConsentBanner(),
+        ),
+      ],
     );
   }
 }

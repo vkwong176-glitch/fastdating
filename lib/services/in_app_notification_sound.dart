@@ -11,7 +11,7 @@ import '../utils/short_notification_wav.dart';
 /// - **App 內音效**／**震動**：控制 [playForAppNotification]（邀聊邀請、FCM 非聊天類、按心等）。
 /// - **訊息相關提示音**：[playForChatMessage] 是否播聲由呼叫端傳入（通常與「App 內音效」一致）。
 /// - **iOS／Android**：使用 [SystemSoundType.alert]（系統提示音，貼近手機通知）。
-/// - **Web**（含 fastdating1.com）：瀏覽器無法指定系統簡訊鈴聲，改播內建極短 WAV；需曾於頁面內觸控以解鎖音訊（見 [onUserPointerDown]）。
+/// - **Web**（含 fastdating1.com）：瀏覽器無法指定系統簡訊鈴聲，改播內建極短 WAV（不在全站觸控時預熱，避免與「按鍵聲」混淆）。
 /// - 主殼 [IndexedStack] 會同時掛載首頁／邀聊通知／訊息等分頁，於背景更新時仍會觸發上述邏輯。
 class InAppNotificationSound {
   InAppNotificationSound._();
@@ -23,28 +23,6 @@ class InAppNotificationSound {
   static const int _debounceMs = 420;
 
   Uint8List _bytes() => _wav ??= buildShortNotificationWavBytes();
-
-  /// Web（尤其 iOS Safari）會阻擋非手勢觸發的播放；進入主殼後任一次觸控呼叫以解鎖。
-  /// 使用**無聲**緩衝播放，避免使用者每次點按都聽到「啵」一聲（舊版曾用低音量仍惱人）。
-  bool _webAudioPrimed = false;
-
-  Future<void> onUserPointerDown() async {
-    if (!kIsWeb || _webAudioPrimed) return;
-    _webAudioPrimed = true;
-    try {
-      await _player.setPlayerMode(PlayerMode.mediaPlayer);
-      await _player.setReleaseMode(ReleaseMode.stop);
-      await _player.stop();
-      await _player.play(
-        BytesSource(
-          buildShortNotificationWavBytes(volume: 0.0, durationSec: 0.02),
-        ),
-      );
-    } catch (e, st) {
-      debugPrint('InAppNotificationSound: web prime failed: $e\n$st');
-      // 仍標為已嘗試，勿還原為 false，否則每次點按都會再嘗試播放（聽起來像「每個掣都有聲」）
-    }
-  }
 
   /// 手機系統提示音（Web／桌面仍用內建 WAV）。
   bool get _usePhoneSystemAlertSound {
