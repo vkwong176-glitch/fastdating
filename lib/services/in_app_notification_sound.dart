@@ -9,7 +9,7 @@ import '../utils/short_notification_wav.dart';
 /// 依 [NotificationProvider] 開關播放提示音；全站共用、含去抖。
 ///
 /// - **App 內音效**／**震動**：控制 [playForAppNotification]（邀聊邀請、FCM 非聊天類、按心等）。
-/// - **對話內音效**：控制 [playForChatMessage]（訊息列表預覽更新、聊天室內對方新訊息、FCM `data.type=chat` 等）。
+/// - **訊息相關提示音**：[playForChatMessage] 是否播聲由呼叫端傳入（通常與「App 內音效」一致）。
 /// - **iOS／Android**：使用 [SystemSoundType.alert]（系統提示音，貼近手機通知）。
 /// - **Web**（含 fastdating1.com）：瀏覽器無法指定系統簡訊鈴聲，改播內建極短 WAV；需曾於頁面內觸控以解鎖音訊（見 [onUserPointerDown]）。
 /// - 主殼 [IndexedStack] 會同時掛載首頁／邀聊通知／訊息等分頁，於背景更新時仍會觸發上述邏輯。

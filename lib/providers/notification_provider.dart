@@ -19,19 +19,16 @@ class MessageNotificationItem {
 class NotificationProvider with ChangeNotifier {
   static const _kInAppSound = 'notif_in_app_sound';
   static const _kInAppVibration = 'notif_in_app_vibration';
-  static const _kChatSound = 'notif_chat_sound';
   static const _kHeartNotification = 'notif_heart';
 
   bool _inAppSound = true;
   bool _inAppVibration = true;
-  bool _chatSound = true;
   bool _heartNotification = true;
 
   bool _prefsLoaded = false;
 
   bool get inAppSound => _inAppSound;
   bool get inAppVibration => _inAppVibration;
-  bool get chatSound => _chatSound;
   bool get heartNotification => _heartNotification;
 
   Future<void> loadFromPrefs() async {
@@ -40,7 +37,6 @@ class NotificationProvider with ChangeNotifier {
       final p = await SharedPreferences.getInstance();
       _inAppSound = p.getBool(_kInAppSound) ?? true;
       _inAppVibration = p.getBool(_kInAppVibration) ?? true;
-      _chatSound = p.getBool(_kChatSound) ?? true;
       _heartNotification = p.getBool(_kHeartNotification) ?? true;
       _prefsLoaded = true;
       notifyListeners();
@@ -54,7 +50,6 @@ class NotificationProvider with ChangeNotifier {
       final p = await SharedPreferences.getInstance();
       await p.setBool(_kInAppSound, _inAppSound);
       await p.setBool(_kInAppVibration, _inAppVibration);
-      await p.setBool(_kChatSound, _chatSound);
       await p.setBool(_kHeartNotification, _heartNotification);
     } catch (_) {}
   }
@@ -67,12 +62,6 @@ class NotificationProvider with ChangeNotifier {
 
   set inAppVibration(bool v) {
     _inAppVibration = v;
-    notifyListeners();
-    _persist();
-  }
-
-  set chatSound(bool v) {
-    _chatSound = v;
     notifyListeners();
     _persist();
   }

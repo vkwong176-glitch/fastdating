@@ -40,7 +40,7 @@ class PushNotificationService {
           d['type'] == 'chat_message';
       if (isChatPush) {
         InAppNotificationSound.instance.playForChatMessage(
-          chatSound: n.chatSound,
+          chatSound: n.inAppSound,
           inAppVibration: n.inAppVibration,
         );
       } else {

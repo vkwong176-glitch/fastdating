@@ -510,7 +510,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     _lastSoundFirestoreMessageId = last.id;
     final notif = Provider.of<NotificationProvider>(context, listen: false);
     InAppNotificationSound.instance.playForChatMessage(
-      chatSound: notif.chatSound,
+      chatSound: notif.inAppSound,
       inAppVibration: notif.inAppVibration,
     );
   }

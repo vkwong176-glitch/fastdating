@@ -96,7 +96,7 @@ class _MessagePageState extends State<MessagePage> {
       if (sender.isEmpty || sender == myUid) continue;
       final notif = Provider.of<NotificationProvider>(context, listen: false);
       InAppNotificationSound.instance.playForChatMessage(
-        chatSound: notif.chatSound,
+        chatSound: notif.inAppSound,
         inAppVibration: notif.inAppVibration,
       );
       return;

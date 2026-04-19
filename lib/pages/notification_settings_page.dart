@@ -5,7 +5,7 @@ import '../utils/constants.dart';
 import '../providers/notification_provider.dart';
 
 /// APP 內通知設定頁（如左下圖）
-/// 項目：App 內音效、App 內震動、訊息通知；背景通知：按心通知
+/// 項目：App 內音效、App 內震動；背景通知：按心通知（訊息提示音跟隨 App 內音效）
 class NotificationSettingsPage extends StatelessWidget {
   const NotificationSettingsPage({super.key});
 
@@ -41,8 +41,6 @@ class NotificationSettingsPage extends StatelessWidget {
                   (v) => provider.inAppSound = v),
               _switchRow('App 內震動', provider.inAppVibration,
                   (v) => provider.inAppVibration = v),
-              _switchRow(
-                  '訊息通知', provider.chatSound, (v) => provider.chatSound = v),
             ],
           ),
           const SizedBox(height: 20),
