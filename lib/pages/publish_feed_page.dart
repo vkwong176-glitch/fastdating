@@ -41,6 +41,9 @@ const double _kPublishLeadingWidth =
 const double _kPublishActionsWidth =
     2 * MainTabAppBar.actionButtonSize + _kPublishActionGap;
 
+/// 「想講～」按鈕相對原設計放大比例（+40%）
+const double _kPublishTalkButtonScale = 1.4;
+
 /// 公開顯示用：不顯示系統／舊資料中的 #反邀約
 String? _stripCounterInviteHashtag(String? hashtags) {
   if (hashtags == null || hashtags.trim().isEmpty) return null;
@@ -344,18 +347,20 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.white,
                           backgroundColor: AppConstants.primaryColor,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 14 * _kPublishTalkButtonScale,
+                            vertical: 8 * _kPublishTalkButtonScale,
                           ),
-                          minimumSize: const Size(0, 36),
+                          minimumSize: Size(0, 36 * _kPublishTalkButtonScale),
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           textStyle: TextStyle(
-                            fontSize: 13 + desktopFs,
+                            fontSize: (13 + desktopFs) * _kPublishTalkButtonScale,
                             fontWeight: FontWeight.w600,
                           ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius: BorderRadius.circular(
+                              18 * _kPublishTalkButtonScale,
+                            ),
                           ),
                         ),
                         child: const Text('想講～'),
@@ -363,9 +368,7 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
                     ),
                     const SizedBox(height: 12),
                     _buildInvitationSection(desktopFs),
-                    const SizedBox(height: 20),
-                    const Divider(height: 1),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 28),
                     // 不同人發佈嘅貼文
                     Text(
                       '不同人發佈嘅貼文',
