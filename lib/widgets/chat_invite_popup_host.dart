@@ -44,7 +44,7 @@ class _ChatInvitePopupHostState extends State<ChatInvitePopupHost> {
     final auth = context.read<AuthProvider>();
     final notif = context.read<NotificationProvider>();
     final uid = auth.uid;
-    if (uid == null || !auth.isLoginMember || !notif.showNotification) return;
+    if (uid == null || !auth.isLoginMember) return;
 
     _sub = ChatFirestoreService.instance.watchIncomingInvitations(uid).listen((
       list,
@@ -84,7 +84,6 @@ class _ChatInvitePopupHostState extends State<ChatInvitePopupHost> {
     final name = item['name'] as String? ?? '會員';
     final text = item['text'] as String? ?? '';
     final inviterUid = item['inviterUid'] as String? ?? '';
-    final avatar = item['avatar'] as String? ?? '';
 
     final agree = await showDialog<bool>(
       context: context,
@@ -151,8 +150,7 @@ class _ChatInvitePopupHostState extends State<ChatInvitePopupHost> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final notif = context.watch<NotificationProvider>();
-    final key = '${auth.uid}_${auth.isLoginMember}_${notif.showNotification}';
+    final key = '${auth.uid}_${auth.isLoginMember}';
     if (key != _lastBindKey) {
       _lastBindKey = key;
       WidgetsBinding.instance.addPostFrameCallback((_) {
