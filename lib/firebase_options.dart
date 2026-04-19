@@ -1,6 +1,6 @@
 // ignore_for_file: lines_longer_than_80_chars
 //
-// Web 已填入 Console「fast-dating-web」設定；Android／iOS 仍請用 flutterfire configure 或手動補齊。
+// Web 與 Android 已填入目前 Firebase Console 設定；iOS／macOS 仍請用 flutterfire configure 或手動補齊。
 //
 // 自訂網域上線後：Firebase Console → Authentication → 設定 →「已授權網域」必須加入你的網域，
 // 否則網頁版 Email／第三方登入會被拒。

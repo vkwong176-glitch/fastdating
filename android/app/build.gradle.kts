@@ -1,3 +1,4 @@
+import java.io.File
 import java.util.Properties
 
 plugins {
@@ -10,11 +11,26 @@ plugins {
 
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
-val hasReleaseKeystore = keystorePropertiesFile.exists()
+val hasKeyProperties = keystorePropertiesFile.exists()
 
-if (hasReleaseKeystore) {
+if (hasKeyProperties) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
+
+fun requiredKeystoreValue(name: String): String =
+    (keystoreProperties.getProperty(name) ?: "").trim()
+
+val releaseStoreFilePath = requiredKeystoreValue("storeFile")
+val releaseStoreFile = if (releaseStoreFilePath.isNotEmpty()) {
+    file(releaseStoreFilePath)
+} else {
+    null
+}
+val hasReleaseKeystore = hasKeyProperties &&
+    requiredKeystoreValue("keyAlias").isNotEmpty() &&
+    requiredKeystoreValue("keyPassword").isNotEmpty() &&
+    requiredKeystoreValue("storePassword").isNotEmpty() &&
+    releaseStoreFile?.exists() == true
 
 android {
     namespace = "com.fastdating1.app"
@@ -41,10 +57,10 @@ android {
     signingConfigs {
         if (hasReleaseKeystore) {
             create("release") {
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
-                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = requiredKeystoreValue("keyAlias")
+                keyPassword = requiredKeystoreValue("keyPassword")
+                storeFile = releaseStoreFile
+                storePassword = requiredKeystoreValue("storePassword")
             }
         }
     }
@@ -57,6 +73,9 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
+            isDebuggable = false
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
