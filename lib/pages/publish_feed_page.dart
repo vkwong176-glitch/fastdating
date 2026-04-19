@@ -44,6 +44,34 @@ const double _kPublishActionsWidth =
 /// 「想講～」按鈕相對原設計放大比例（+40%）
 const double _kPublishTalkButtonScale = 1.4;
 
+/// 與頂端（AppBar 下第一個可捲動區）約 0.5cm
+const double _kPublishScrollTopInset =
+    0.5 * AppConstants.logicalPxPerCm;
+
+/// 白框內頂部額外內距（與捲動區頂距分流，避免過厚）
+const double _kPublishCardInnerTopPadding = 6.0;
+
+double _publishGapAfterTalkFirestore(
+  AsyncSnapshot<List<Map<String, dynamic>>> snapshot,
+) {
+  final list = snapshot.data ?? [];
+  final waiting =
+      snapshot.connectionState == ConnectionState.waiting && list.isEmpty;
+  if (list.isNotEmpty || waiting) return 12;
+  return 0;
+}
+
+double _publishGapBeforeFeedFirestore(
+  AsyncSnapshot<List<Map<String, dynamic>>> snapshot,
+) {
+  final list = snapshot.data ?? [];
+  final waiting =
+      snapshot.connectionState == ConnectionState.waiting && list.isEmpty;
+  if (list.isNotEmpty) return 28;
+  if (waiting) return 16;
+  return 6;
+}
+
 /// 公開顯示用：不顯示系統／舊資料中的 #反邀約
 String? _stripCounterInviteHashtag(String? hashtags) {
   if (hashtags == null || hashtags.trim().isEmpty) return null;
@@ -204,60 +232,57 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
     } catch (_) {}
   }
 
-  Widget _buildInvitationSection(double desktopFs) {
-    final auth = Provider.of<AuthProvider>(context);
-    if (FirebaseBootstrap.isReady && auth.isLogin && auth.uid != null) {
-      return StreamBuilder<List<Map<String, dynamic>>>(
-        stream:
-            ChatFirestoreService.instance.watchIncomingInvitations(auth.uid!),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                '讀取邀請失敗：${snapshot.error}',
-                style: TextStyle(fontSize: 14 + desktopFs, color: Colors.red),
-              ),
-            );
-          }
-          final list = snapshot.data ?? [];
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              list.isEmpty) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Center(
-                child: SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-            );
-          }
-          if (list.isEmpty) {
-            return const SizedBox.shrink();
-          }
-          return Column(
-            children: list.map((item) {
-              final name = item['name'] as String? ?? '會員';
-              final text = item['text'] as String? ?? '';
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _buildInvitationCard(
-                  context,
-                  desktopFs: desktopFs,
-                  icon: Icons.chat_bubble_outline,
-                  iconColor: Colors.blue,
-                  text: '$name：$text',
-                  onAccept: () => _onAcceptFirestoreInvitation(item),
-                  onReject: () => _onRejectFirestoreInvitation(item),
-                ),
-              );
-            }).toList(),
-          );
-        },
+  Widget _buildFirestoreInvitesFromSnapshot(
+    AsyncSnapshot<List<Map<String, dynamic>>> snapshot,
+    double desktopFs,
+  ) {
+    if (snapshot.hasError) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(
+          '讀取邀請失敗：${snapshot.error}',
+          style: TextStyle(fontSize: 14 + desktopFs, color: Colors.red),
+        ),
       );
     }
+    final list = snapshot.data ?? [];
+    if (snapshot.connectionState == ConnectionState.waiting &&
+        list.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(
+          child: SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+    if (list.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Column(
+      children: list.map((item) {
+        final name = item['name'] as String? ?? '會員';
+        final text = item['text'] as String? ?? '';
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: _buildInvitationCard(
+            context,
+            desktopFs: desktopFs,
+            icon: Icons.chat_bubble_outline,
+            iconColor: Colors.blue,
+            text: '$name：$text',
+            onAccept: () => _onAcceptFirestoreInvitation(item),
+            onReject: () => _onRejectFirestoreInvitation(item),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildDemoInvitationSection(double desktopFs) {
     return Column(
       children: [
         ..._invitations.map((item) => Padding(
@@ -277,9 +302,127 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
     );
   }
 
+  Widget _buildPublishCardInnerColumn({
+    required double desktopFs,
+    required double gapAfterTalkButton,
+    required double gapBeforeFeedTitle,
+    required Widget invitationBlock,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: _openOneSentencePage,
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: AppConstants.primaryColor,
+              padding: EdgeInsets.symmetric(
+                horizontal: 14 * _kPublishTalkButtonScale,
+                vertical: 8 * _kPublishTalkButtonScale,
+              ),
+              minimumSize: Size(0, 36 * _kPublishTalkButtonScale),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              textStyle: TextStyle(
+                fontSize: (13 + desktopFs) * _kPublishTalkButtonScale,
+                fontWeight: FontWeight.w600,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(
+                  18 * _kPublishTalkButtonScale,
+                ),
+              ),
+            ),
+            child: const Text('想講～'),
+          ),
+        ),
+        SizedBox(height: gapAfterTalkButton),
+        invitationBlock,
+        SizedBox(height: gapBeforeFeedTitle),
+        Text(
+          '不同人發佈嘅貼文',
+          style: TextStyle(
+            fontSize: 15 + desktopFs + _kPublishContentTextBoost,
+            fontWeight: FontWeight.w600,
+            color: AppConstants.grey,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Builder(
+          builder: (context) {
+            final allPosts =
+                Provider.of<FeedProvider>(context).userPosts;
+            final promotionPosts =
+                allPosts.where((p) => p.isAdPromotion).toList();
+            final normalPosts =
+                allPosts.where((p) => !p.isAdPromotion).toList();
+            final posts =
+                mergePromotionItems<UserPostItem, UserPostItem>(
+              items: normalPosts,
+              promotions: promotionPosts,
+              pageSalt: 'publish_feed',
+              promotionId: (p) => p.id,
+              buildPromotionItem: (p) => p,
+              maxPromotions: null,
+            );
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ...posts.map(
+                  (post) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildPostCard(
+                      desktopFs: desktopFs,
+                      postId: post.id,
+                      name: post.name,
+                      authorAge: post.authorAge,
+                      tag: post.tag,
+                      content: post.content,
+                      hashtags: post.hashtags,
+                      iconColor: post.iconColor,
+                      imageBytes: post.imageBytes,
+                      imageUrl: post.imageUrl,
+                      viewCount: post.viewCount,
+                      authorUid: post.authorUid,
+                      externalLink: post.externalLink,
+                      isAdPromotion: post.isAdPromotion,
+                      timeLabel: post.createdAtUtc != null
+                          ? formatHongKongTimeFromDateTime(
+                              post.createdAtUtc,
+                            )
+                          : null,
+                      mockPost: !post.isAdPromotion &&
+                          post.authorUid == null,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        _buildPostCard(
+          desktopFs: desktopFs,
+          postId: 'p1',
+          name: 'POOLD',
+          tag: '貼文',
+          content: '遊車河聽CD 吹海風睇夜景',
+          hashtags: '#180橫膊胸肌人魚線 #白淨斯文肌肉 #車河',
+          iconColor: AppConstants.primaryColor,
+          userId: 'p1',
+          viewCount: 128,
+          mockPost: true,
+          timeLabel: '示範 · 2025/04/01 14:30',
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final langProvider = Provider.of<LanguageProvider>(context);
+    final auth = Provider.of<AuthProvider>(context);
     final desktopFs =
         _isPublishDesktopLayout(context) ? _kPublishDesktopFontBoost : 0.0;
     return Scaffold(
@@ -317,7 +460,12 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppConstants.padding),
+        padding: EdgeInsets.fromLTRB(
+          AppConstants.padding,
+          _kPublishScrollTopInset,
+          AppConstants.padding,
+          AppConstants.padding,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -336,117 +484,39 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
                 ],
               ),
               child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: _openOneSentencePage,
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: AppConstants.primaryColor,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 14 * _kPublishTalkButtonScale,
-                            vertical: 8 * _kPublishTalkButtonScale,
-                          ),
-                          minimumSize: Size(0, 36 * _kPublishTalkButtonScale),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          textStyle: TextStyle(
-                            fontSize: (13 + desktopFs) * _kPublishTalkButtonScale,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              18 * _kPublishTalkButtonScale,
-                            ),
-                          ),
-                        ),
-                        child: const Text('想講～'),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildInvitationSection(desktopFs),
-                    const SizedBox(height: 28),
-                    // 不同人發佈嘅貼文
-                    Text(
-                      '不同人發佈嘅貼文',
-                      style: TextStyle(
-                        fontSize: 15 + desktopFs + _kPublishContentTextBoost,
-                        fontWeight: FontWeight.w600,
-                        color: AppConstants.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Builder(
-                      builder: (context) {
-                        final allPosts =
-                            Provider.of<FeedProvider>(context).userPosts;
-                        final promotionPosts =
-                            allPosts.where((p) => p.isAdPromotion).toList();
-                        final normalPosts =
-                            allPosts.where((p) => !p.isAdPromotion).toList();
-                        final posts =
-                            mergePromotionItems<UserPostItem, UserPostItem>(
-                          items: normalPosts,
-                          promotions: promotionPosts,
-                          pageSalt: 'publish_feed',
-                          promotionId: (p) => p.id,
-                          buildPromotionItem: (p) => p,
-                          maxPromotions: null,
-                        );
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            ...posts.map(
-                              (post) => Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: _buildPostCard(
-                                  desktopFs: desktopFs,
-                                  postId: post.id,
-                                  name: post.name,
-                                  authorAge: post.authorAge,
-                                  tag: post.tag,
-                                  content: post.content,
-                                  hashtags: post.hashtags,
-                                  iconColor: post.iconColor,
-                                  imageBytes: post.imageBytes,
-                                  imageUrl: post.imageUrl,
-                                  viewCount: post.viewCount,
-                                  authorUid: post.authorUid,
-                                  externalLink: post.externalLink,
-                                  isAdPromotion: post.isAdPromotion,
-                                  timeLabel: post.createdAtUtc != null
-                                      ? formatHongKongTimeFromDateTime(
-                                          post.createdAtUtc,
-                                        )
-                                      : null,
-                                  mockPost: !post.isAdPromotion &&
-                                      post.authorUid == null,
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    _buildPostCard(
-                      desktopFs: desktopFs,
-                      postId: 'p1',
-                      name: 'POOLD',
-                      tag: '貼文',
-                      content: '遊車河聽CD 吹海風睇夜景',
-                      hashtags: '#180橫膊胸肌人魚線 #白淨斯文肌肉 #車河',
-                      iconColor: AppConstants.primaryColor,
-                      userId: 'p1',
-                      viewCount: 128,
-                      mockPost: true,
-                      timeLabel: '示範 · 2025/04/01 14:30',
-                    ),
-                  ],
+                padding: const EdgeInsets.fromLTRB(
+                  16,
+                  _kPublishCardInnerTopPadding,
+                  16,
+                  16,
                 ),
+                child: (FirebaseBootstrap.isReady &&
+                        auth.isLogin &&
+                        auth.uid != null)
+                    ? StreamBuilder<List<Map<String, dynamic>>>(
+                        stream: ChatFirestoreService.instance
+                            .watchIncomingInvitations(auth.uid!),
+                        builder: (context, snapshot) {
+                          return _buildPublishCardInnerColumn(
+                            desktopFs: desktopFs,
+                            gapAfterTalkButton:
+                                _publishGapAfterTalkFirestore(snapshot),
+                            gapBeforeFeedTitle:
+                                _publishGapBeforeFeedFirestore(snapshot),
+                            invitationBlock: _buildFirestoreInvitesFromSnapshot(
+                              snapshot,
+                              desktopFs,
+                            ),
+                          );
+                        },
+                      )
+                    : _buildPublishCardInnerColumn(
+                        desktopFs: desktopFs,
+                        gapAfterTalkButton: 12,
+                        gapBeforeFeedTitle: 28,
+                        invitationBlock:
+                            _buildDemoInvitationSection(desktopFs),
+                      ),
               ),
             ),
             const SizedBox(height: 20),
