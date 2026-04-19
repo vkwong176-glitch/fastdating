@@ -1,4 +1,4 @@
-package com.example.vickywong
+package com.fastdating1.app
 
 import android.os.Bundle
 import android.os.Handler

@@ -42,11 +42,11 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'REPLACE_WITH_ANDROID_API_KEY',
-    appId: '1:000000000000:android:0000000000000000000000',
-    messagingSenderId: '000000000000',
-    projectId: 'fastdating-placeholder',
-    storageBucket: 'fastdating-placeholder.appspot.com',
+    apiKey: 'AIzaSyBJAz8vN5smHhkgu9qHnAsuknHMRWq1U5Q',
+    appId: '1:780058794247:android:e1d62f3e5832a8946b0da2',
+    messagingSenderId: '780058794247',
+    projectId: 'fast-dating-vk',
+    storageBucket: 'fast-dating-vk.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(

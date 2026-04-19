@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +10,7 @@ import '../utils/constants.dart';
 import '../providers/language_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/font_size_provider.dart';
+import '../services/account_deletion_service.dart';
 import '../utils/launch_url_helper.dart';
 import '../widgets/main_tab_app_bar.dart';
 import '../widgets/pressable_opacity.dart';
@@ -27,6 +29,7 @@ class _SettingsPageState extends State<SettingsPage> {
   static const double _settingsAccountBlockFontExtra =
       AppConstants.filterFontExtraHalfCm;
   bool _inappropriateFilterOn = true;
+  bool _deletingAccount = false;
 
   bool _isMobileLayout(BuildContext context) =>
       MediaQuery.sizeOf(context).width < AppConstants.layoutWideBreakpoint;
@@ -336,12 +339,14 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: 24),
           PressableOpacity(
-            onPressed: () async {
-              await authProvider.logout();
-              if (context.mounted) {
-                context.go('/login');
-              }
-            },
+            onPressed: _deletingAccount
+                ? null
+                : () async {
+                    await authProvider.logout();
+                    if (context.mounted) {
+                      context.go('/login');
+                    }
+                  },
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -366,41 +371,25 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: 12),
           PressableOpacity(
-            onPressed: () {
-              // 刪除帳戶確認
-              showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('刪除帳戶'),
-                  content: const Text('確定要刪除帳戶嗎？此操作無法復原。'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: Text(langProvider.getString('close')),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text(
-                        '刪除',
-                        style: TextStyle(color: AppConstants.primaryColor),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
+            onPressed: _deletingAccount
+                ? null
+                : () => _confirmAndDeleteAccount(context, langProvider),
             child: Container(
               width: double.infinity,
               padding: EdgeInsets.symmetric(
                 vertical: 14 + settingsFontExtra,
               ),
               decoration: BoxDecoration(
-                color: AppConstants.primaryColor,
+                color: _deletingAccount
+                    ? AppConstants.primaryColor.withValues(alpha: 0.6)
+                    : AppConstants.primaryColor,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
                 child: Text(
-                  langProvider.getString('delete_account'),
+                  _deletingAccount
+                      ? '刪除中...'
+                      : langProvider.getString('delete_account'),
                   style: TextStyle(
                     fontSize: 16 + contentFontExtra + mobileFs,
                     fontWeight: FontWeight.w600,
@@ -983,5 +972,88 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ),
     );
+  }
+
+  bool _currentAccountNeedsPasswordConfirmation() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+    final providerIds = user.providerData
+        .map((e) => e.providerId.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet();
+    return providerIds.contains('password');
+  }
+
+  Future<void> _confirmAndDeleteAccount(
+    BuildContext context,
+    LanguageProvider langProvider,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+    final needsPassword = _currentAccountNeedsPasswordConfirmation();
+    final passwordController = TextEditingController();
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('刪除帳戶'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('確定要刪除帳戶嗎？此操作無法復原。'),
+              if (needsPassword) ...[
+                const SizedBox(height: 12),
+                const Text('請輸入目前密碼以確認刪除。'),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: passwordController,
+                  obscureText: true,
+                  enableSuggestions: false,
+                  autocorrect: false,
+                  decoration: const InputDecoration(
+                    labelText: '目前密碼',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(langProvider.getString('close')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text(
+                '刪除',
+                style: TextStyle(color: AppConstants.primaryColor),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+
+      setState(() => _deletingAccount = true);
+      final result =
+          await AccountDeletionService.instance.deleteCurrentUserAccount(
+        currentPassword: passwordController.text,
+      );
+      if (!mounted) return;
+      setState(() => _deletingAccount = false);
+
+      messenger.showSnackBar(
+        SnackBar(content: Text(result.message)),
+      );
+      if (!result.success) return;
+
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      if (!mounted) return;
+      router.go('/login');
+    } finally {
+      passwordController.dispose();
+    }
   }
 }
