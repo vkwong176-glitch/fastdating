@@ -1,7 +1,6 @@
 import 'dart:async' show unawaited;
 
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -16,7 +15,6 @@ import '../services/chat_firestore_service.dart';
 import '../services/chat_quota_service.dart';
 import '../services/feed_firestore_service.dart';
 import '../services/firebase_bootstrap.dart';
-import '../services/user_firestore_service.dart';
 import '../utils/ad_promotion_utils.dart';
 import '../utils/hk_time_format.dart';
 import '../utils/launch_url_helper.dart';
@@ -69,7 +67,7 @@ class _InvitationItem {
       required this.avatar});
 }
 
-/// 發布頁面：左手白框內容 — 異性配對邀聊通知、不同人發佈嘅貼文
+/// 發布頁面：左手白框內容 — 待處理邀聊（Firestore）、不同人發佈嘅貼文
 class PublishFeedPage extends StatefulWidget {
   const PublishFeedPage({super.key});
 
@@ -234,39 +232,17 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
             );
           }
           if (list.isEmpty) {
-            return FutureBuilder<String>(
-              future: UserFirestoreService.instance.fetchUserGender(auth.uid!),
-              builder: (context, genderSnap) {
-                if (genderSnap.connectionState == ConnectionState.waiting) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Center(
-                      child: SizedBox(
-                        width: 28,
-                        height: 28,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                  );
-                }
-                final myGender = genderSnap.data ?? 'male';
-                return _DemoOppositeInvitesList(
-                  key: ValueKey<String>('demo_inv_$myGender'),
-                  myGender: myGender,
-                  desktopFs: desktopFs,
-                  cardBuilder: (item, onAccept, onReject) {
-                    return _buildInvitationCard(
-                      context,
-                      desktopFs: desktopFs,
-                      icon: Icons.chat_bubble_outline,
-                      iconColor: Colors.blue,
-                      text: '${item['name']}：${item['lastMessage']}',
-                      onAccept: onAccept,
-                      onReject: onReject,
-                    );
-                  },
-                );
-              },
+            final lang = Provider.of<LanguageProvider>(context, listen: false);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                lang.getString('publish_invites_section_empty'),
+                style: TextStyle(
+                  fontSize: 14 + desktopFs + _kPublishContentTextBoost,
+                  color: AppConstants.grey,
+                  height: 1.45,
+                ),
+              ),
             );
           }
           return Column(
@@ -280,7 +256,7 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
                   desktopFs: desktopFs,
                   icon: Icons.chat_bubble_outline,
                   iconColor: Colors.blue,
-                  text: '$name\n$text',
+                  text: '$name：$text',
                   onAccept: () => _onAcceptFirestoreInvitation(item),
                   onReject: () => _onRejectFirestoreInvitation(item),
                 ),
@@ -353,7 +329,7 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 左手白框：異性配對邀請 + 不同人貼文
+            // 左手白框：待處理邀聊 + 不同人貼文
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
@@ -372,43 +348,29 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 異性配對邀聊通知
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Text(
-                            '異性配對邀聊通知',
-                            style: TextStyle(
-                              fontSize:
-                                  15 + desktopFs + _kPublishContentTextBoost,
-                              fontWeight: FontWeight.w600,
-                              color: AppConstants.grey,
-                            ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _openOneSentencePage,
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: AppConstants.primaryColor,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          minimumSize: const Size(0, 36),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          textStyle: TextStyle(
+                            fontSize: 13 + desktopFs,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        TextButton(
-                          onPressed: _openOneSentencePage,
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: AppConstants.primaryColor,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 8,
-                            ),
-                            minimumSize: const Size(0, 36),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            textStyle: TextStyle(
-                              fontSize: 13 + desktopFs,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                          ),
-                          child: const Text('想講～'),
-                        ),
-                      ],
+                        child: const Text('想講～'),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     _buildInvitationSection(desktopFs),
@@ -1086,83 +1048,6 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Firestore 尚無邀請時：顯示 3 則隨機異性邀聊示範（接受／拒絕僅影響本機列表）
-class _DemoOppositeInvitesList extends StatefulWidget {
-  const _DemoOppositeInvitesList({
-    super.key,
-    required this.myGender,
-    required this.desktopFs,
-    required this.cardBuilder,
-  });
-
-  final String myGender;
-  final double desktopFs;
-  final Widget Function(
-    Map<String, dynamic> item,
-    VoidCallback onAccept,
-    VoidCallback onReject,
-  ) cardBuilder;
-
-  @override
-  State<_DemoOppositeInvitesList> createState() =>
-      _DemoOppositeInvitesListState();
-}
-
-class _DemoOppositeInvitesListState extends State<_DemoOppositeInvitesList> {
-  late List<Map<String, dynamic>> _items;
-
-  @override
-  void initState() {
-    super.initState();
-    _items = List<Map<String, dynamic>>.from(
-      getRandomOppositeSexChatList(myGender: widget.myGender, count: 3),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_items.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 4),
-        child: Text(
-          '目前沒有聊天邀請',
-          style: TextStyle(
-            fontSize: 14 + widget.desktopFs + _kPublishContentTextBoost,
-            color: AppConstants.grey,
-          ),
-        ),
-      );
-    }
-    return Column(
-      children: _items.map((item) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: widget.cardBuilder(
-            item,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ChatDetailPage(
-                    userId: item['userId'] as String,
-                    name: item['name'] as String,
-                    avatar: item['avatar'] as String,
-                  ),
-                ),
-              );
-            },
-            () {
-              setState(() {
-                _items.remove(item);
-              });
-            },
-          ),
-        );
-      }).toList(),
     );
   }
 }
