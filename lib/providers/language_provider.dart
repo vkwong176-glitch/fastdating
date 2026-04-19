@@ -129,6 +129,9 @@ class LanguageProvider with ChangeNotifier {
     'menu': '選單',
     'file': '檔案',
     'publish': '邀聊通知',
+    'publish_invites_section_heading': '首頁邀聊邀請',
+    'publish_invites_section_intro':
+        '不同會員經首頁發出邀請聊天通知時，邀請將顯示於此，你可選擇拒絕或接受。',
     'thinking_prompt': '你在想什麼？',
     'one_sentence': '一句話',
     'gift_shop': '禮品店',
@@ -711,6 +714,9 @@ class LanguageProvider with ChangeNotifier {
     'menu': '菜单',
     'file': '档案',
     'publish': '邀聊通知',
+    'publish_invites_section_heading': '首页邀聊邀请',
+    'publish_invites_section_intro':
+        '不同会员经首页发出邀请聊天通知时，邀请将显示于此，你可选择拒绝或接受。',
     'thinking_prompt': '你在想什么？',
     'one_sentence': '一句话',
     'gift_shop': '礼品店',
@@ -1290,6 +1296,9 @@ class LanguageProvider with ChangeNotifier {
     'menu': 'Menu',
     'file': 'Profile',
     'publish': 'Chat invites',
+    'publish_invites_section_heading': 'Home chat invites',
+    'publish_invites_section_intro':
+        'Invites sent from the home page appear here. You can decline or accept.',
     'thinking_prompt': 'What are you thinking?',
     'one_sentence': 'One sentence',
     'gift_shop': 'Gift shop',

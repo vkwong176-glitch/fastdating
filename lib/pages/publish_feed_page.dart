@@ -51,16 +51,6 @@ const double _kPublishScrollTopInset =
 /// 白框內頂部額外內距（與捲動區頂距分流，避免過厚）
 const double _kPublishCardInnerTopPadding = 6.0;
 
-double _publishGapAfterTalkFirestore(
-  AsyncSnapshot<List<Map<String, dynamic>>> snapshot,
-) {
-  final list = snapshot.data ?? [];
-  final waiting =
-      snapshot.connectionState == ConnectionState.waiting && list.isEmpty;
-  if (list.isNotEmpty || waiting) return 12;
-  return 0;
-}
-
 double _publishGapBeforeFeedFirestore(
   AsyncSnapshot<List<Map<String, dynamic>>> snapshot,
 ) {
@@ -232,6 +222,67 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
     } catch (_) {}
   }
 
+  Widget _buildFirestoreInviteSectionWithHeading(
+    AsyncSnapshot<List<Map<String, dynamic>>> snapshot,
+    double desktopFs,
+  ) {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          lang.getString('publish_invites_section_heading'),
+          style: TextStyle(
+            fontSize: 15 + desktopFs + _kPublishContentTextBoost,
+            fontWeight: FontWeight.w600,
+            color: AppConstants.grey,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          lang.getString('publish_invites_section_intro'),
+          style: TextStyle(
+            fontSize: 13 + desktopFs + _kPublishContentTextBoost,
+            fontWeight: FontWeight.w400,
+            height: 1.45,
+            color: AppConstants.grey,
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildFirestoreInvitesFromSnapshot(snapshot, desktopFs),
+      ],
+    );
+  }
+
+  Widget _buildDemoInviteSectionWithHeading(double desktopFs) {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          lang.getString('publish_invites_section_heading'),
+          style: TextStyle(
+            fontSize: 15 + desktopFs + _kPublishContentTextBoost,
+            fontWeight: FontWeight.w600,
+            color: AppConstants.grey,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          lang.getString('publish_invites_section_intro'),
+          style: TextStyle(
+            fontSize: 13 + desktopFs + _kPublishContentTextBoost,
+            fontWeight: FontWeight.w400,
+            height: 1.45,
+            color: AppConstants.grey,
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildDemoInvitationSection(desktopFs),
+      ],
+    );
+  }
+
   Widget _buildFirestoreInvitesFromSnapshot(
     AsyncSnapshot<List<Map<String, dynamic>>> snapshot,
     double desktopFs,
@@ -302,42 +353,40 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
     );
   }
 
+  Widget _buildPublishAppBarTalkButton(double desktopFs) {
+    return TextButton(
+      onPressed: _openOneSentencePage,
+      style: TextButton.styleFrom(
+        foregroundColor: Colors.white,
+        backgroundColor: AppConstants.primaryColor,
+        padding: EdgeInsets.symmetric(
+          horizontal: 14 * _kPublishTalkButtonScale,
+          vertical: 8 * _kPublishTalkButtonScale,
+        ),
+        minimumSize: Size(0, 36 * _kPublishTalkButtonScale),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        textStyle: TextStyle(
+          fontSize: (13 + desktopFs) * _kPublishTalkButtonScale,
+          fontWeight: FontWeight.w600,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(
+            18 * _kPublishTalkButtonScale,
+          ),
+        ),
+      ),
+      child: const Text('想講～'),
+    );
+  }
+
   Widget _buildPublishCardInnerColumn({
     required double desktopFs,
-    required double gapAfterTalkButton,
     required double gapBeforeFeedTitle,
     required Widget invitationBlock,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton(
-            onPressed: _openOneSentencePage,
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.white,
-              backgroundColor: AppConstants.primaryColor,
-              padding: EdgeInsets.symmetric(
-                horizontal: 14 * _kPublishTalkButtonScale,
-                vertical: 8 * _kPublishTalkButtonScale,
-              ),
-              minimumSize: Size(0, 36 * _kPublishTalkButtonScale),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              textStyle: TextStyle(
-                fontSize: (13 + desktopFs) * _kPublishTalkButtonScale,
-                fontWeight: FontWeight.w600,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(
-                  18 * _kPublishTalkButtonScale,
-                ),
-              ),
-            ),
-            child: const Text('想講～'),
-          ),
-        ),
-        SizedBox(height: gapAfterTalkButton),
         invitationBlock,
         SizedBox(height: gapBeforeFeedTitle),
         Text(
@@ -421,14 +470,14 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
 
   @override
   Widget build(BuildContext context) {
-    final langProvider = Provider.of<LanguageProvider>(context);
     final auth = Provider.of<AuthProvider>(context);
     final desktopFs =
         _isPublishDesktopLayout(context) ? _kPublishDesktopFontBoost : 0.0;
     return Scaffold(
       backgroundColor: AppConstants.backgroundColor,
       appBar: MainTabAppBar(
-        title: langProvider.getString('publish'),
+        title: '',
+        titleWidget: _buildPublishAppBarTalkButton(desktopFs),
         slotWidth: _kPublishActionsWidth,
         leading: MainTabAppBar.buildHomeLeadingButton(
           onPressed: MainTabAppBar.buildReturnHomeHandler(
@@ -499,11 +548,10 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
                         builder: (context, snapshot) {
                           return _buildPublishCardInnerColumn(
                             desktopFs: desktopFs,
-                            gapAfterTalkButton:
-                                _publishGapAfterTalkFirestore(snapshot),
                             gapBeforeFeedTitle:
                                 _publishGapBeforeFeedFirestore(snapshot),
-                            invitationBlock: _buildFirestoreInvitesFromSnapshot(
+                            invitationBlock:
+                                _buildFirestoreInviteSectionWithHeading(
                               snapshot,
                               desktopFs,
                             ),
@@ -512,10 +560,9 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
                       )
                     : _buildPublishCardInnerColumn(
                         desktopFs: desktopFs,
-                        gapAfterTalkButton: 12,
                         gapBeforeFeedTitle: 28,
                         invitationBlock:
-                            _buildDemoInvitationSection(desktopFs),
+                            _buildDemoInviteSectionWithHeading(desktopFs),
                       ),
               ),
             ),

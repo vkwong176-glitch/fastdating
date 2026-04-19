@@ -14,10 +14,14 @@ class MainTabAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.leadingLeftInset,
     this.leadingWidth,
     this.actionsRightInset,
+    this.titleWidget,
   });
 
   final String title;
   final List<Widget> actions;
+
+  /// 若設定則取代 [title] 文字（例如邀聊頁頂欄中央「想講～」按鈕）。
+  final Widget? titleWidget;
 
   /// 左側按鈕（例如返回首頁）；為 null 時維持空白以置中標題。
   final Widget? leading;
@@ -144,16 +148,17 @@ class MainTabAppBar extends StatelessWidget implements PreferredSizeWidget {
         child: leading ?? const SizedBox.shrink(),
       ),
       centerTitle: true,
-      title: Text(
-        title,
-        style: TextStyle(
-          fontSize: titleFs,
-          fontWeight: FontWeight.w600,
-          color: Colors.black87,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+      title: titleWidget ??
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: titleFs,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
       actions: [
         SizedBox(
           width: slotWidth + resolvedRightInset,
