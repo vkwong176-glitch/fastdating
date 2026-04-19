@@ -25,6 +25,7 @@ class InAppNotificationSound {
   Uint8List _bytes() => _wav ??= buildShortNotificationWavBytes();
 
   /// Web（尤其 iOS Safari）會阻擋非手勢觸發的播放；進入主殼後任一次觸控呼叫以解鎖。
+  /// 使用**無聲**緩衝播放，避免使用者每次點按都聽到「啵」一聲（舊版曾用低音量仍惱人）。
   bool _webAudioPrimed = false;
 
   Future<void> onUserPointerDown() async {
@@ -36,12 +37,12 @@ class InAppNotificationSound {
       await _player.stop();
       await _player.play(
         BytesSource(
-          buildShortNotificationWavBytes(volume: 0.04, durationSec: 0.06),
+          buildShortNotificationWavBytes(volume: 0.0, durationSec: 0.02),
         ),
       );
     } catch (e, st) {
       debugPrint('InAppNotificationSound: web prime failed: $e\n$st');
-      _webAudioPrimed = false;
+      // 仍標為已嘗試，勿還原為 false，否則每次點按都會再嘗試播放（聽起來像「每個掣都有聲」）
     }
   }
 
