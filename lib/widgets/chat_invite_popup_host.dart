@@ -6,11 +6,9 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/language_provider.dart';
 import '../providers/nav_provider.dart';
-import '../providers/notification_provider.dart';
 import '../services/chat_firestore_service.dart';
 import '../services/chat_quota_service.dart';
 import '../services/firebase_bootstrap.dart';
-import '../services/in_app_notification_sound.dart';
 import 'chat_quota_gate.dart';
 
 /// 全域監聽待處理邀聊；有新內容時即時彈窗提醒會員查看。
@@ -42,7 +40,6 @@ class _ChatInvitePopupHostState extends State<ChatInvitePopupHost> {
     _dialogOpen = false;
     if (!FirebaseBootstrap.isReady) return;
     final auth = context.read<AuthProvider>();
-    final notif = context.read<NotificationProvider>();
     final uid = auth.uid;
     if (uid == null || !auth.isLoginMember) return;
 
@@ -68,10 +65,6 @@ class _ChatInvitePopupHostState extends State<ChatInvitePopupHost> {
         _pendingDialogs.add(Map<String, dynamic>.from(item));
       }
 
-      InAppNotificationSound.instance.playForAppNotification(
-        inAppSound: notif.inAppSound,
-        inAppVibration: notif.inAppVibration,
-      );
       _drainDialogs();
     });
   }

@@ -16,10 +16,8 @@ import '../widgets/pressable_opacity.dart';
 import '../widgets/chat_bubble.dart';
 import '../providers/auth_provider.dart';
 import '../providers/language_provider.dart';
-import '../providers/notification_provider.dart';
 import '../services/chat_firestore_service.dart';
 import '../services/chat_quota_service.dart';
-import '../services/in_app_notification_sound.dart';
 import '../services/firebase_bootstrap.dart';
 import '../services/firestore_paths.dart';
 import '../services/chat_receipt_cookies.dart';
@@ -77,10 +75,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   bool _scheduledEnsureConversation = false;
   bool _scheduledVerifyMessagingAccess = false;
   Timer? _markPeerReadDebounce;
-
-  /// 略過首次載入快照，之後對方新訊息才播「對話內音效」。
-  bool _skipFirstFirestoreMessagesSnapshot = true;
-  String? _lastSoundFirestoreMessageId;
 
   @override
   void initState() {
@@ -493,28 +487,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     });
   }
 
-  void _maybePlayPeerMessageSound(
-    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
-    String myUid,
-  ) {
-    if (!mounted || docs.isEmpty) return;
-    final last = docs.last;
-    final senderId = last.data()['senderId'] as String? ?? '';
-    if (senderId == myUid) return;
-    if (_skipFirstFirestoreMessagesSnapshot) {
-      _skipFirstFirestoreMessagesSnapshot = false;
-      _lastSoundFirestoreMessageId = last.id;
-      return;
-    }
-    if (last.id == _lastSoundFirestoreMessageId) return;
-    _lastSoundFirestoreMessageId = last.id;
-    final notif = Provider.of<NotificationProvider>(context, listen: false);
-    InAppNotificationSound.instance.playForChatMessage(
-      chatSound: notif.inAppSound,
-      inAppVibration: notif.inAppVibration,
-    );
-  }
-
   void _handleOutboundSendFailure(Object e) {
     if (!mounted) return;
     if (e.toString().contains('messaging_requires_invitation_accept')) {
@@ -653,11 +625,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             ? AppConstants.chatDetailDesktopMessageExtraTenthCm
             : 0.0;
         final docs = snapshot.data?.docs ?? [];
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          _maybePlayPeerMessageSound(docs, myUid);
-        });
-
         /// 對方留在對話內時仍會持續收到新訊息；僅首次標已讀會漏掉後續訊息之 [readAt]，故用 debounce 重複標記。
         /// 空對話也需呼叫：將 [unreadCountByUid] 歸零（訊息列表紅點）。
         _markPeerReadDebounce?.cancel();

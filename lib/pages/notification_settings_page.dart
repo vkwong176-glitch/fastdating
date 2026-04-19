@@ -4,8 +4,7 @@ import 'package:provider/provider.dart';
 import '../utils/constants.dart';
 import '../providers/notification_provider.dart';
 
-/// APP 內通知設定頁（如左下圖）
-/// 項目：App 內音效、App 內震動；背景通知：按心通知（訊息提示音跟隨 App 內音效）
+/// 通知設定：僅「按心通知」是否啟用（自訂 App 內音效／震動已移除，交給系統推播）
 class NotificationSettingsPage extends StatelessWidget {
   const NotificationSettingsPage({super.key});
 
@@ -17,7 +16,7 @@ class NotificationSettingsPage extends StatelessWidget {
     final titleFs = AppConstants.appBarTitleResolvedSize(context, base: 20);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('APP 內通知'),
+        title: const Text('通知設定'),
         titleTextStyle: theme.appBarTheme.titleTextStyle?.copyWith(
               fontSize: titleFs,
             ) ??
@@ -33,17 +32,6 @@ class NotificationSettingsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         children: [
-          _buildSection(
-            context,
-            '提示',
-            [
-              _switchRow('App 內音效', provider.inAppSound,
-                  (v) => provider.inAppSound = v),
-              _switchRow('App 內震動', provider.inAppVibration,
-                  (v) => provider.inAppVibration = v),
-            ],
-          ),
-          const SizedBox(height: 20),
           _buildSection(
             context,
             '背景通知',

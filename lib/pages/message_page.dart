@@ -11,7 +11,6 @@ import '../providers/feed_provider.dart';
 import '../providers/language_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/nav_provider.dart';
-import '../services/in_app_notification_sound.dart';
 import '../providers/auth_provider.dart';
 import '../services/firebase_bootstrap.dart';
 import '../services/chat_firestore_service.dart';
@@ -42,7 +41,7 @@ class _MessagePageState extends State<MessagePage> {
   /// 用於示範列表異性篩選；載入完成前不附加示範（避免閃爍）
   String? _genderForDemo;
 
-  /// `conversationId` → 指紋；對方發話導致預覽更新時播「對話內音效」（與聊天室內一致）。
+  /// `conversationId` → 最後預覽指紋（略過首次快照用）。
   final Map<String, String> _conversationListFingerprints = {};
 
   /// 略過首次快照，否則登入載入列表會對每一列誤判為「新訊息」。
@@ -72,11 +71,7 @@ class _MessagePageState extends State<MessagePage> {
     }
   }
 
-  /// [IndexedStack] 下訊息分頁仍會收到列表串流，故在其他分頁也能聽到新訊息提示音。
-  void _maybePlayNewMessageFromPeerSound(
-    List<Map<String, dynamic>> real,
-    String myUid,
-  ) {
+  void _syncConversationListFingerprints(List<Map<String, dynamic>> real) {
     if (_skipFirstConversationListSnapshot) {
       _skipFirstConversationListSnapshot = false;
       _seedConversationListFingerprints(real);
@@ -90,16 +85,7 @@ class _MessagePageState extends State<MessagePage> {
           (item['firestoreListMs'] as int? ?? 0);
       final preview = item['lastMessage'] as String? ?? '';
       final fp = '$ms|$sender|$preview';
-      final prev = _conversationListFingerprints[cid];
-      if (prev != null && fp == prev) continue;
       _conversationListFingerprints[cid] = fp;
-      if (sender.isEmpty || sender == myUid) continue;
-      final notif = Provider.of<NotificationProvider>(context, listen: false);
-      InAppNotificationSound.instance.playForChatMessage(
-        chatSound: notif.inAppSound,
-        inAppVibration: notif.inAppVibration,
-      );
-      return;
     }
   }
 
@@ -463,7 +449,7 @@ class _MessagePageState extends State<MessagePage> {
             }
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted) return;
-              _maybePlayNewMessageFromPeerSound(real, auth.uid!);
+              _syncConversationListFingerprints(real);
               if (kIsWeb) {
                 var sum = 0;
                 for (final item in real) {

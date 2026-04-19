@@ -8,7 +8,6 @@ import 'package:provider/provider.dart';
 import '../utils/constants.dart';
 import '../utils/responsive_layout.dart';
 import '../providers/subscription_provider.dart';
-import '../providers/notification_provider.dart';
 import '../providers/language_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -17,7 +16,6 @@ import '../services/store_iap_service.dart';
 import '../services/store_product_ids.dart';
 import '../services/subscription_order_service.dart';
 import '../services/payment_settings_service.dart';
-import '../services/in_app_notification_sound.dart';
 import '../services/user_firestore_service.dart';
 import '../providers/nav_provider.dart';
 import '../widgets/main_tab_app_bar.dart';
@@ -441,11 +439,6 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
         productId: productId,
       );
       if (!mounted) return;
-      final notif = Provider.of<NotificationProvider>(context, listen: false);
-      InAppNotificationSound.instance.playForAppNotification(
-        inAppSound: notif.inAppSound,
-        inAppVibration: notif.inAppVibration,
-      );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(

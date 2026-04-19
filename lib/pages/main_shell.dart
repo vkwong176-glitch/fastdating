@@ -22,7 +22,6 @@ import 'publish_feed_page.dart';
 import '../widgets/chat_quota_gate.dart';
 import '../widgets/chat_invite_popup_host.dart';
 import '../widgets/feed_heart_inbox_host.dart';
-import '../widgets/subscription_expiry_sound_host.dart';
 import '../services/firebase_bootstrap.dart';
 import '../services/manual_subscription_billing_service.dart';
 import '../services/screen_capture_platform.dart';
@@ -54,7 +53,6 @@ class _MainShellState extends State<MainShell> {
           .setCurrentIndex(widget.initialIndex);
       final notif = Provider.of<NotificationProvider>(context, listen: false);
       notif.loadFromPrefs();
-      PushNotificationService.instance.bindNotificationProvider(notif);
       PushNotificationService.instance.completeDeferredWebInit();
       final auth = Provider.of<AuthProvider>(context, listen: false);
       if (kIsWeb &&
@@ -195,7 +193,6 @@ class _MainShellState extends State<MainShell> {
         boundedShell,
         const ChatInvitePopupHost(),
         const FeedHeartInboxHost(),
-        const SubscriptionExpirySoundHost(),
         const Positioned(
           left: 0,
           right: 0,

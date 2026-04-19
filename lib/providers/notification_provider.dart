@@ -14,29 +14,20 @@ class MessageNotificationItem {
   });
 }
 
-/// APP 內通知設定與待顯示通知
-/// 功能：所有訊息通知可同步彈出屏幕一次
+/// APP 內通知相關狀態與待顯示通知（不含自訂音效／震動；推播音效由系統處理）
 class NotificationProvider with ChangeNotifier {
-  static const _kInAppSound = 'notif_in_app_sound';
-  static const _kInAppVibration = 'notif_in_app_vibration';
   static const _kHeartNotification = 'notif_heart';
 
-  bool _inAppSound = true;
-  bool _inAppVibration = true;
   bool _heartNotification = true;
 
   bool _prefsLoaded = false;
 
-  bool get inAppSound => _inAppSound;
-  bool get inAppVibration => _inAppVibration;
   bool get heartNotification => _heartNotification;
 
   Future<void> loadFromPrefs() async {
     if (_prefsLoaded) return;
     try {
       final p = await SharedPreferences.getInstance();
-      _inAppSound = p.getBool(_kInAppSound) ?? true;
-      _inAppVibration = p.getBool(_kInAppVibration) ?? true;
       _heartNotification = p.getBool(_kHeartNotification) ?? true;
       _prefsLoaded = true;
       notifyListeners();
@@ -48,22 +39,8 @@ class NotificationProvider with ChangeNotifier {
   Future<void> _persist() async {
     try {
       final p = await SharedPreferences.getInstance();
-      await p.setBool(_kInAppSound, _inAppSound);
-      await p.setBool(_kInAppVibration, _inAppVibration);
       await p.setBool(_kHeartNotification, _heartNotification);
     } catch (_) {}
-  }
-
-  set inAppSound(bool v) {
-    _inAppSound = v;
-    notifyListeners();
-    _persist();
-  }
-
-  set inAppVibration(bool v) {
-    _inAppVibration = v;
-    notifyListeners();
-    _persist();
   }
 
   set heartNotification(bool v) {

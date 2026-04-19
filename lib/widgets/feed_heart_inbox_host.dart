@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/language_provider.dart';
 import '../providers/notification_provider.dart';
-import '../services/in_app_notification_sound.dart';
 import '../services/feed_firestore_service.dart';
 import '../services/firebase_bootstrap.dart';
 import '../services/user_firestore_service.dart';
@@ -48,10 +47,6 @@ class _FeedHeartInboxHostState extends State<FeedHeartInboxHost> {
         return;
       }
       if (_dialogOpen) return;
-      InAppNotificationSound.instance.playForAppNotification(
-        inAppSound: notif.inAppSound,
-        inAppVibration: notif.inAppVibration,
-      );
       _dialogOpen = true;
       final doc = snapshot.docs.first;
       _handleFirstHeart(doc).whenComplete(() {

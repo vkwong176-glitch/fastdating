@@ -2,12 +2,9 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../providers/notification_provider.dart';
 import '../services/firebase_bootstrap.dart';
-import '../services/in_app_notification_sound.dart';
 import '../services/payment_settings_service.dart';
 import '../services/subscription_order_service.dart';
 import '../utils/constants.dart';
@@ -348,15 +345,6 @@ Future<void> showManualPaymentCheckoutSheet(
                               if (!context.mounted) return;
                               Navigator.pop(ctx);
                               if (!context.mounted) return;
-                              final notif = Provider.of<NotificationProvider>(
-                                context,
-                                listen: false,
-                              );
-                              InAppNotificationSound.instance
-                                  .playForAppNotification(
-                                inAppSound: notif.inAppSound,
-                                inAppVibration: notif.inAppVibration,
-                              );
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text(successSnackBar)),
                               );

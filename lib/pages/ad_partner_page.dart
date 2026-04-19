@@ -13,14 +13,12 @@ import 'package:provider/provider.dart';
 import '../providers/ad_payment_provider.dart';
 import '../providers/ad_post_provider.dart';
 import '../providers/language_provider.dart';
-import '../providers/notification_provider.dart';
 import '../services/firebase_bootstrap.dart';
 import '../services/firestore_paths.dart';
 import '../services/store_iap_service.dart';
 import '../services/store_product_ids.dart';
 import '../services/subscription_order_service.dart';
 import '../services/payment_settings_service.dart';
-import '../services/in_app_notification_sound.dart';
 import '../services/user_firestore_service.dart';
 import '../utils/constants.dart';
 import '../utils/launch_url_helper.dart';
@@ -940,11 +938,6 @@ class _AdPartnerPageState extends State<AdPartnerPage> {
         productId: productId,
       );
       if (!mounted) return;
-      final notif = Provider.of<NotificationProvider>(context, listen: false);
-      InAppNotificationSound.instance.playForAppNotification(
-        inAppSound: notif.inAppSound,
-        inAppVibration: notif.inAppVibration,
-      );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(lang.getString('payment_success_check_receipt')),
