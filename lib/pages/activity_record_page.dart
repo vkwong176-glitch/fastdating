@@ -34,7 +34,8 @@ class ActivityRecordPage extends StatelessWidget {
     }
     switch (code) {
       case 'stripe':
-        return lang.getString('payment_method_stripe');
+      case 'pending_stripe':
+        return lang.getString('payment_method_legacy_removed');
       case 'manual_fps_wechat_bank':
         return lang.getString('payment_method_manual_transfer');
       case 'iap_app_store':
@@ -169,7 +170,7 @@ class ActivityRecordPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: AppConstants.grey.withOpacity(0.08),
+            color: AppConstants.grey.withValues(alpha: 0.08),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -187,7 +188,7 @@ class ActivityRecordPage extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.event, color: AppConstants.primaryColor, size: 24),
+                const Icon(Icons.event, color: AppConstants.primaryColor, size: 24),
                 const SizedBox(width: 8),
                 Text(
                   langProvider.getString('receipt_title'),

@@ -36,7 +36,7 @@ class SeoMetadata {
       return const SeoMetadata(
         title: '廣告刊登｜$_site Speed Dating 平台曝光',
         description:
-            '在 $_site 刊登交友與活動廣告，觸及單身配對與 speed dating 用戶；支援方案選購與 Stripe 付款。$_baseKeywords。',
+            '在 $_site 刊登交友與活動廣告，觸及單身配對與 speed dating 用戶；支援方案選購、手動付款與 App 內購。$_baseKeywords。',
         h1: '廣告刊登與平台合作',
       );
     }

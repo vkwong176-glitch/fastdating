@@ -5,10 +5,12 @@ import 'package:flutter/foundation.dart';
 import '../utils/firestore_image_data_url.dart';
 import '../utils/image_upload_compress.dart'
     show prepareEventCmsPosterForUpload;
+import 'ad_coop_billing_service.dart';
 import '../utils/upgrade_matching_tier.dart';
 import 'activity_firestore_service.dart';
 import 'firebase_bootstrap.dart';
 import 'firestore_paths.dart';
+import 'manual_subscription_billing_service.dart';
 import 'subscription_order_service.dart';
 import 'user_firestore_service.dart' show kDiscoverDefaultSentence;
 
@@ -229,9 +231,24 @@ class AdminBackendService {
   /// 管理員標記訂單為已付款（人工核實後按鍵；無收據時亦可標記，由後台承擔）。
   Future<void> setSubscriptionOrderAdminPaid(String docId) async {
     if (!_ok) return;
-    await _db.collection(FirestorePaths.subscriptionOrders).doc(docId).update({
+    final ref = _db.collection(FirestorePaths.subscriptionOrders).doc(docId);
+    final snap = await ref.get();
+    if (!snap.exists) return;
+    final data = snap.data()!;
+    if (AdCoopBillingService.isManualMonthlyAdCoopOrder(data)) {
+      await AdCoopBillingService.confirmManualOrderPaymentAsAdmin(docId);
+      return;
+    }
+    if (ManualSubscriptionBillingService.isManualMonthlySubscriptionOrder(data)) {
+      await ManualSubscriptionBillingService.confirmManualOrderPaymentAsAdmin(
+        docId,
+      );
+      return;
+    }
+    await ref.update({
       'adminPaid': true,
       'adminPaidAt': FieldValue.serverTimestamp(),
+      'status': SubscriptionOrderService.statusPaidManual,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
@@ -431,6 +448,7 @@ class AdminBackendService {
     final orderRef =
         _db.collection(FirestorePaths.subscriptionOrders).doc(orderDocId);
     final userRef = _db.collection(FirestorePaths.users).doc(uid);
+    final orderSnap = await orderRef.get();
 
     final userSnap = await userRef.get();
     var clearUserMirror = false;
@@ -443,16 +461,23 @@ class AdminBackendService {
     }
 
     final batch = _db.batch();
-    batch.update(orderRef, {
-      'adPostTitle': FieldValue.delete(),
-      'adPostText': FieldValue.delete(),
-      'adPostLink': FieldValue.delete(),
-      'adPostImageUrl': FieldValue.delete(),
-      'adContentReviewStatus': FieldValue.delete(),
-      'adContentReviewNote': FieldValue.delete(),
-      'adContentReviewAt': FieldValue.delete(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+    if (orderSnap.exists) {
+      batch.update(orderRef, {
+        'adPostTitle': FieldValue.delete(),
+        'adPostText': FieldValue.delete(),
+        'adPostLink': FieldValue.delete(),
+        'adPostImageUrl': FieldValue.delete(),
+        'adPostImageURL': FieldValue.delete(),
+        'ad_post_title': FieldValue.delete(),
+        'ad_post_text': FieldValue.delete(),
+        'ad_post_link': FieldValue.delete(),
+        'ad_post_image_url': FieldValue.delete(),
+        'adContentReviewStatus': FieldValue.delete(),
+        'adContentReviewNote': FieldValue.delete(),
+        'adContentReviewAt': FieldValue.delete(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
     if (clearUserMirror) {
       batch.update(userRef, {
         'adCoopLatestSubmission': FieldValue.delete(),
@@ -519,7 +544,9 @@ class AdminBackendService {
     final s = (m['status'] as String?) ?? '';
     return s == 'paid_iap' ||
         s == 'upgraded' ||
+        // 保留舊資料相容，待遷移後可移除。
         s == 'paid_stripe' ||
+        s == SubscriptionOrderService.statusPaidManual ||
         s == 'paid';
   }
 
@@ -600,6 +627,25 @@ class AdminBackendService {
       if (n == 0) break;
     }
     return total;
+  }
+
+  /// 掃描手動月繳訂單，補發到期前提醒與逾期停權。
+  Future<int> processManualSubscriptionBillingSweep({
+    int batchLimit = 200,
+  }) async {
+    if (!_ok) return 0;
+    return ManualSubscriptionBillingService.processAllOrdersAsAdmin(
+      batchLimit: batchLimit,
+    );
+  }
+
+  Future<int> processAdCoopBillingSweep({
+    int batchLimit = 200,
+  }) async {
+    if (!_ok) return 0;
+    return AdCoopBillingService.processAllOrdersAsAdmin(
+      batchLimit: batchLimit,
+    );
   }
 
   /// App 端預留之付款紀錄（與 [PaymentBackendService]、IAP／Stripe 對齊）。

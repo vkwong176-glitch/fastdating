@@ -1,10 +1,8 @@
-import 'dart:async' show unawaited;
 import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -12,9 +10,11 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/language_provider.dart';
+import '../services/ad_coop_billing_service.dart';
 import '../models/event_proposal_models.dart';
 import '../services/admin_backend_service.dart';
 import '../services/feed_firestore_service.dart';
+import '../services/manual_subscription_billing_service.dart';
 import '../services/subscription_order_service.dart';
 import '../services/admin_firebase_session.dart';
 import '../services/event_proposal_service.dart';
@@ -28,7 +28,6 @@ import '../utils/admin_password_hash.dart';
 import '../utils/constants.dart';
 import '../widgets/allow_admin_screenshot.dart';
 import '../widgets/admin_pagination.dart';
-import '../widgets/manual_payment_reference_sheet.dart';
 import '../widgets/storage_network_image.dart';
 export 'admin_section_d_page.dart';
 export 'admin_payment_settings_page.dart';
@@ -916,12 +915,69 @@ bool _subscriptionOrderAutoPaid(Map<String, dynamic> m) {
   /// 與 [SubscriptionProvider._orderPaidFromFirestore] 之 `paid` 等狀態對齊。
   return s == 'paid_iap' ||
       s == 'upgraded' ||
+      // 保留舊資料相容，待遷移後可移除。
       s == 'paid_stripe' ||
+      s == SubscriptionOrderService.statusPaidManual ||
       s == 'paid';
 }
 
 bool _subscriptionOrderDisplayPaid(Map<String, dynamic> m) {
   return m['adminPaid'] == true || _subscriptionOrderAutoPaid(m);
+}
+
+bool _subscriptionOrderCanConfirmNextManualCycle(Map<String, dynamic> m) {
+  return _orderHasManualMonthlyBilling(m) && _orderHasRemainingManualCycles(m);
+}
+
+String _subscriptionOrderManualBillingStatus(Map<String, dynamic> m) {
+  final status = (m['manualBillingStatus'] as String?)?.trim() ?? '';
+  switch (status) {
+    case ManualSubscriptionBillingService.statusPendingFirstPayment:
+      return '待首期付款';
+    case ManualSubscriptionBillingService.statusPastDueSuspended:
+      return '逾期待付款';
+    case ManualSubscriptionBillingService.statusCompleted:
+      return '已完成';
+    case ManualSubscriptionBillingService.statusActive:
+      return '生效中';
+    default:
+      return '—';
+  }
+}
+
+bool _orderHasManualMonthlyBilling(Map<String, dynamic> m) {
+  return ManualSubscriptionBillingService.isManualMonthlySubscriptionOrder(m) ||
+      AdCoopBillingService.isManualMonthlyAdCoopOrder(m);
+}
+
+int _orderManualBillingPaidMonths(Map<String, dynamic> m) {
+  if (ManualSubscriptionBillingService.isManualMonthlySubscriptionOrder(m)) {
+    return ManualSubscriptionBillingService.paidMonthsFor(m);
+  }
+  if (AdCoopBillingService.isManualMonthlyAdCoopOrder(m)) {
+    return AdCoopBillingService.paidMonthsFor(m);
+  }
+  final raw = m['manualBillingPaidMonths'];
+  if (raw is int) return raw;
+  if (raw is num) return raw.toInt();
+  return 0;
+}
+
+int _orderManualBillingTotalMonths(Map<String, dynamic> m) {
+  if (ManualSubscriptionBillingService.isManualMonthlySubscriptionOrder(m)) {
+    return ManualSubscriptionBillingService.totalMonthsFor(m);
+  }
+  if (AdCoopBillingService.isManualMonthlyAdCoopOrder(m)) {
+    return AdCoopBillingService.totalMonthsFor(m);
+  }
+  final raw = m['manualBillingTotalMonths'];
+  if (raw is int) return raw;
+  if (raw is num) return raw.toInt();
+  return 1;
+}
+
+bool _orderHasRemainingManualCycles(Map<String, dynamic> m) {
+  return _orderManualBillingPaidMonths(m) < _orderManualBillingTotalMonths(m);
 }
 
 /// 由訂單 [totalPrice] 字串解析數字金額（與活動報名 HKD$ 格式一致）。
@@ -986,6 +1042,32 @@ bool _subscriptionOrderIsAdCoop(Map<String, dynamic> m) {
       SubscriptionOrderService.purchaseKindAdCoop;
 }
 
+bool _subscriptionOrderHasAdCoopContent(Map<String, dynamic> m) {
+  final adTitle =
+      ((m['adPostTitle'] ?? m['ad_post_title']) ?? '').toString().trim();
+  final adBody =
+      ((m['adPostText'] ?? m['ad_post_text']) ?? '').toString().trim();
+  final adLink =
+      ((m['adPostLink'] ?? m['ad_post_link']) ?? '').toString().trim();
+  final adImageUrl =
+      ((m['adPostImageUrl'] ?? m['adPostImageURL'] ?? m['ad_post_image_url']) ??
+              '')
+          .toString()
+          .trim();
+  return adTitle.isNotEmpty ||
+      adBody.isNotEmpty ||
+      adLink.isNotEmpty ||
+      adImageUrl.isNotEmpty;
+}
+
+int _adCoopOrderSortMs(Map<String, dynamic> m) {
+  final updatedAt = m['updatedAt'];
+  if (updatedAt is Timestamp) return updatedAt.millisecondsSinceEpoch;
+  final createdAt = m['createdAt'];
+  if (createdAt is Timestamp) return createdAt.millisecondsSinceEpoch;
+  return 0;
+}
+
 String _subscriptionPaymentMethodLabel(LanguageProvider lang, String? raw) {
   final r = (raw ?? '').trim();
   if (r.isEmpty) return '—';
@@ -997,7 +1079,7 @@ String _subscriptionPaymentMethodLabel(LanguageProvider lang, String? raw) {
       return lang.getString('admin_pay_other');
     case 'stripe':
     case 'pending_stripe':
-      return lang.getString('admin_pay_stripe');
+      return lang.getString('payment_method_legacy_removed');
     case 'iap_app_store':
       return lang.getString('admin_pay_iap_ios');
     case 'iap_google_play':
@@ -1140,6 +1222,7 @@ Future<void> _publishAdCoopPromotion(
   required String adImageUrl,
   required int durationMonths,
   required String existingPostId,
+  String linkedOrderId = '',
 }) async {
   if (!_adminEnsureFirebaseWrite(context, lang, svc)) return;
   if (adText.trim().isEmpty &&
@@ -1154,7 +1237,31 @@ Future<void> _publishAdCoopPromotion(
   }
   try {
     final nowUtc = DateTime.now().toUtc();
-    final expiresAtUtc = _addMonthsUtc(nowUtc, durationMonths);
+    var expiresAtUtc = _addMonthsUtc(nowUtc, durationMonths);
+    final trimmedLinkedOrderId = linkedOrderId.trim();
+    if (trimmedLinkedOrderId.isNotEmpty) {
+      final orderSnap = await FirebaseFirestore.instance
+          .collection(FirestorePaths.subscriptionOrders)
+          .doc(trimmedLinkedOrderId)
+          .get();
+      final orderData = orderSnap.data();
+      if (orderData != null) {
+        if (!_subscriptionOrderDisplayPaid(orderData)) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('請先確認此廣告訂單已付款，再發佈宣傳貼文。')),
+            );
+          }
+          return;
+        }
+        if (AdCoopBillingService.isManualMonthlyAdCoopOrder(orderData)) {
+          final manualExpiry = AdCoopBillingService.expirationFor(orderData);
+          if (manualExpiry != null) {
+            expiresAtUtc = manualExpiry.toUtc();
+          }
+        }
+      }
+    }
     final postId = await FeedFirestoreService.instance.publishAdminAdPromotion(
       displayName: adTitle.trim().isNotEmpty ? adTitle : displayName,
       content: adText,
@@ -1163,6 +1270,7 @@ Future<void> _publishAdCoopPromotion(
       promotionSourceMemberUid: memberUid,
       existingPostId: existingPostId,
       durationMonths: durationMonths,
+      explicitExpiresAtUtc: expiresAtUtc,
     );
     if (postId == null || postId.isEmpty) return;
     await svc.updateAdCoopPromotionMetadata(
@@ -1520,7 +1628,7 @@ String _adCoopPromotionStatusLabel(String status) {
   }
 }
 
-/// 廣告審批：合併多來源 [users] 快照，依 [adCoopLatestSubmission.submittedAt] 新到舊。
+/// 廣告審批：合併多來源 [users] 快照，依最新貼文日期新到舊。
 List<DocumentSnapshot<Map<String, dynamic>>> _mergeAdCoopApprovalUserDocs(
   List<DocumentSnapshot<Map<String, dynamic>>> a,
   List<DocumentSnapshot<Map<String, dynamic>>> b,
@@ -2234,6 +2342,7 @@ Widget _adminStandaloneAdCoopCard(
                           adImageUrl: adImgUrl,
                           durationMonths: promotionDurationMonths,
                           existingPostId: promotionPostId,
+                          linkedOrderId: linkedOrderId,
                         ),
                         child: const Text('宣傳貼文'),
                       ),
@@ -2318,6 +2427,7 @@ Widget _adminSubscriptionOrderCard(
     timeStr = DateFormat('yyyy-MM-dd HH:mm:ss').format(created.toDate());
   }
   final paidShown = _subscriptionOrderDisplayPaid(m);
+  final canConfirmNextManualCycle = _subscriptionOrderCanConfirmNextManualCycle(m);
   final dealDone = paidShown;
   final isAd = _subscriptionOrderIsAdCoop(m);
   final reviewSt = (m['adContentReviewStatus'] as String?)?.trim() ?? '';
@@ -2542,6 +2652,20 @@ Widget _adminSubscriptionOrderCard(
                 '${lang.getString('admin_sec_c_expires')}: $expStr',
                 style: const TextStyle(fontSize: 14),
               ),
+              if (_orderHasManualMonthlyBilling(m)) ...[
+                const SizedBox(height: 4),
+                Text(
+                  '月繳進度: '
+                  '${_orderManualBillingPaidMonths(m)}/'
+                  '${_orderManualBillingTotalMonths(m)}',
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '月繳狀態: ${_subscriptionOrderManualBillingStatus(m)}',
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ],
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -2563,7 +2687,7 @@ Widget _adminSubscriptionOrderCard(
                     ),
                   ),
                   const Spacer(),
-                  if (!paidShown) ...[
+                  if (!paidShown || canConfirmNextManualCycle) ...[
                     FilledButton.tonal(
                       onPressed: () => _markSubscriptionOrderAdminPaid(
                         context,
@@ -3853,7 +3977,7 @@ class _AdminSectionFPageState extends State<AdminSectionFPage> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<int>(
-                    value: selectedMaxReg,
+                    initialValue: selectedMaxReg,
                     decoration: InputDecoration(
                       labelText: lang.getString('admin_sec_f_registration_cap'),
                       border: OutlineInputBorder(
@@ -4293,8 +4417,16 @@ class _AdCoopReviewPanel extends StatelessWidget {
 
                           final orderDocs = orderSnap.data!.docs
                               .where(
-                                  (d) => _subscriptionOrderIsAdCoop(d.data()))
-                              .toList();
+                                (d) =>
+                                    _subscriptionOrderIsAdCoop(d.data()) &&
+                                    _subscriptionOrderHasAdCoopContent(
+                                        d.data()),
+                              )
+                              .toList()
+                            ..sort(
+                              (a, b) => _adCoopOrderSortMs(b.data())
+                                  .compareTo(_adCoopOrderSortMs(a.data())),
+                            );
                           final standDocs = standSnap.data!.docs
                               .map((d) =>
                                   d as DocumentSnapshot<Map<String, dynamic>>)

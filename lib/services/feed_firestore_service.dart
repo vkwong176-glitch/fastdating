@@ -557,6 +557,7 @@ class FeedFirestoreService {
     String existingPostId = '',
     int durationMonths = 1,
     String promotionOrigin = adPromotionOriginMemberApproval,
+    DateTime? explicitExpiresAtUtc,
   }) async {
     if (!FirebaseBootstrap.isReady) return null;
     final adminUser = FirebaseAuth.instance.currentUser;
@@ -572,7 +573,7 @@ class FeedFirestoreService {
     }
     final effectiveMonths = durationMonths < 1 ? 1 : durationMonths;
     final nowUtc = DateTime.now().toUtc();
-    final expiresUtc = _addMonthsUtc(nowUtc, effectiveMonths);
+    final expiresUtc = explicitExpiresAtUtc?.toUtc() ?? _addMonthsUtc(nowUtc, effectiveMonths);
     final trimmedExistingPostId = existingPostId.trim();
     final docRef = trimmedExistingPostId.isNotEmpty
         ? _db

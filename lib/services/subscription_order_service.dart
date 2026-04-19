@@ -6,12 +6,16 @@ import 'package:flutter/foundation.dart';
 import '../utils/firestore_image_data_url.dart';
 import '../utils/image_upload_compress.dart'
     show prepareEventCmsPosterForUpload;
+import 'ad_coop_billing_service.dart';
 import 'firebase_bootstrap.dart';
 import 'firestore_paths.dart';
+import 'manual_subscription_billing_service.dart';
 
 /// 訂閱方案訂單寫入 [FirestorePaths.subscriptionOrders]，供管理後台「訂閱方案訂單」同步顯示。
 abstract final class SubscriptionOrderService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  static const String statusPaidManual = 'paid_manual';
 
   /// 目前登入會員自己的訂單（依 [createdAt] 新到舊排序）；未登入或匿名為單次空列表。
   static Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>>
@@ -69,7 +73,9 @@ abstract final class SubscriptionOrderService {
     final s = (m['status'] as String?) ?? '';
     return s == 'paid_iap' ||
         s == 'upgraded' ||
+        // 保留舊資料相容，待遷移後可移除。
         s == 'paid_stripe' ||
+        s == statusPaidManual ||
         s == 'paid';
   }
 
@@ -83,7 +89,7 @@ abstract final class SubscriptionOrderService {
     return true;
   }
 
-  /// 建立訂單紀錄（會員端）；[paymentMethod] 例：`iap_app_store`、`iap_google_play`、`stripe`、`manual_fps_wechat_bank`。
+  /// 建立訂單紀錄（會員端）；[paymentMethod] 例：`iap_app_store`、`iap_google_play`、`manual_fps_wechat_bank`。
   static Future<String?> recordOrder({
     required String planName,
     required String months,
@@ -111,6 +117,14 @@ abstract final class SubscriptionOrderService {
     if (!FirebaseBootstrap.isReady) return null;
     if (!await _ensureSignedInForOrder()) return null;
     final u = FirebaseAuth.instance.currentUser!;
+    final isManualMonthlySubscription =
+        purchaseKind == purchaseKindSubscription &&
+            paymentMethod ==
+                ManualSubscriptionBillingService.paymentMethodManual;
+    final isManualMonthlyAdCoop =
+        purchaseKind == purchaseKindAdCoop &&
+            paymentMethod ==
+                ManualSubscriptionBillingService.paymentMethodManual;
     final doc = await _db.collection(FirestorePaths.subscriptionOrders).add({
       'userId': u.uid,
       'userEmail': u.email,
@@ -130,6 +144,14 @@ abstract final class SubscriptionOrderService {
       if (adPostLink != null && adPostLink.isNotEmpty) 'adPostLink': adPostLink,
       if (adFeePlanSnapshot != null && adFeePlanSnapshot.isNotEmpty)
         'adFeePlanSnapshot': adFeePlanSnapshot,
+      if (isManualMonthlySubscription)
+        ...ManualSubscriptionBillingService.buildInitialOrderFields(
+          months: months,
+        ),
+      if (isManualMonthlyAdCoop)
+        ...AdCoopBillingService.buildInitialOrderFields(
+          months: months,
+        ),
       'createdAt': FieldValue.serverTimestamp(),
     });
     return doc.id;

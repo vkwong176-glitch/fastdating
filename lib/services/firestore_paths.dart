@@ -49,12 +49,9 @@ abstract final class FirestorePaths {
   static const paymentReportSettings = 'payment_report_settings';
   static const paymentReportSettingsDoc = 'default';
 
-  /// 會員端付款方式開關、Stripe Publishable Key、Price ID 對照（與 Cloud Functions 共用）
+  /// 會員端付款方式開關與手動付款顯示資料。
   static const paymentSettings = 'payment_settings';
   static const paymentSettingsDefaultDoc = 'default';
-
-  /// 僅 Cloud Functions／Callable 可讀寫；存 Stripe Secret Key、Webhook Secret（Firestore 規則拒絕客戶端）
-  static const paymentSettingsPrivateDoc = 'private_stripe';
 
   /// 提議活動方案（會員提交、管理員審批）
   static const eventProposals = 'event_proposals';

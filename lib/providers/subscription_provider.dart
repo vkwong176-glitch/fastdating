@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../services/firebase_bootstrap.dart';
 import '../services/firestore_paths.dart';
+import '../services/manual_subscription_billing_service.dart';
 import '../services/subscription_order_service.dart';
 
 /// 訂閱消費紀錄（已付費／Firestore 訂單）
@@ -42,8 +43,12 @@ class SubscriptionRecord {
 
   /// [subscription_orders.updatedAt]；無則 null
   final DateTime? orderUpdatedAt;
+  final DateTime? explicitExpirationDate;
 
   DateTime get expirationDate {
+    if (explicitExpirationDate != null) {
+      return explicitExpirationDate!;
+    }
     if (isAccountTierHint) {
       return purchaseDate.add(const Duration(days: 365));
     }
@@ -78,6 +83,7 @@ class SubscriptionRecord {
     this.adContentReviewNote,
     this.adContentHistory = const [],
     this.orderUpdatedAt,
+    this.explicitExpirationDate,
   });
 }
 
@@ -177,6 +183,7 @@ class SubscriptionProvider with ChangeNotifier {
     final updatedRaw = m['updatedAt'];
     DateTime? orderUpd;
     if (updatedRaw is Timestamp) orderUpd = updatedRaw.toDate();
+    final explicitExpiry = ManualSubscriptionBillingService.expirationFor(m);
     return SubscriptionRecord(
       id: d.id,
       planName: m['planName']?.toString() ?? '—',
@@ -197,6 +204,7 @@ class SubscriptionProvider with ChangeNotifier {
       adContentReviewNote: m['adContentReviewNote']?.toString(),
       adContentHistory: _parseAdContentHistory(m['adContentHistory']),
       orderUpdatedAt: orderUpd,
+      explicitExpirationDate: explicitExpiry,
     );
   }
 

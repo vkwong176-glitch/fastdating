@@ -8,11 +8,7 @@ import '../utils/constants.dart';
 class PaymentSettingsSnapshot {
   const PaymentSettingsSnapshot({
     required this.enableIap,
-    required this.enableStripe,
     required this.enableManual,
-    this.stripePublishableKey,
-    this.stripePriceIds,
-    this.stripeCheckoutUrls,
     this.manualPaymentFpsId,
     this.manualPaymentBankAccountLine,
     this.manualPaymentAccountName,
@@ -22,17 +18,7 @@ class PaymentSettingsSnapshot {
   });
 
   final bool enableIap;
-  final bool enableStripe;
   final bool enableManual;
-
-  /// 僅供 Web 若日後嵌入 Stripe.js；Checkout 跳轉主要由 Callable 處理。
-  final String? stripePublishableKey;
-
-  /// Stripe Dashboard 各 Price ID，key 與 Cloud Functions [priceMapKeyFromOrder] 一致。
-  final Map<String, String>? stripePriceIds;
-
-  /// 各付款分頁／場景可獨立設定固定 Stripe URL（例如 Payment Link）。
-  final Map<String, String>? stripeCheckoutUrls;
 
   /// 手動付款顯示資料（FPS／WeChat／銀行轉帳）。
   final String? manualPaymentFpsId;
@@ -49,12 +35,7 @@ class PaymentSettingsSnapshot {
     return defaultValue;
   }
 
-  /// 供後台讀取單一 Stripe 字串欄位（與 [fromMap] 相同規則，避免 Web Int64）。
-  static String readStripeString(Map<String, dynamic>? map, String key) =>
-      _stripeScalarToString(map?[key]);
-
-  /// Web（dart2js）上部分 Firestore 標量不適合直接 `.toString()`（例如內部 Int64）；Stripe 欄位一律轉成純字串。
-  static String _stripeScalarToString(dynamic val) {
+  static String _scalarToString(dynamic val) {
     if (val == null) return '';
     if (val is String) return val;
     if (val is num || val is bool) return val.toString();
@@ -65,55 +46,25 @@ class PaymentSettingsSnapshot {
     }
   }
 
-  static Map<String, String>? _stringMapField(
-    Map<String, dynamic>? m,
-    String key,
-  ) {
-    final raw = m?[key];
-    if (raw is! Map) return null;
-    final out = <String, String>{};
-    for (final e in raw.entries) {
-      final k = e.key.toString();
-      final s = _stripeScalarToString(e.value);
-      if (s.isNotEmpty) {
-        out[k] = s;
-      }
-    }
-    return out.isEmpty ? null : out;
-  }
-
   static PaymentSettingsSnapshot fromMap(Map<String, dynamic>? m) {
-    final ids = _stringMapField(m, 'stripePriceIds');
-    final urls = _stringMapField(m, 'stripeCheckoutUrls');
-    final pk = _stripeScalarToString(m?['stripePublishableKey']);
     return PaymentSettingsSnapshot(
       enableIap: _boolField(m, 'enableIap'),
-      enableStripe: _boolField(m, 'enableStripe', defaultValue: false),
       enableManual: _boolField(m, 'enableManual'),
-      stripePublishableKey: pk.isEmpty ? null : pk,
-      stripePriceIds: ids,
-      stripeCheckoutUrls: urls,
-      manualPaymentFpsId: _stripeScalarToString(m?['manualPaymentFpsId']),
+      manualPaymentFpsId: _scalarToString(m?['manualPaymentFpsId']),
       manualPaymentBankAccountLine:
-          _stripeScalarToString(m?['manualPaymentBankAccountLine']),
-      manualPaymentAccountName:
-          _stripeScalarToString(m?['manualPaymentAccountName']),
-      manualPaymentAccountNo:
-          _stripeScalarToString(m?['manualPaymentAccountNo']),
+          _scalarToString(m?['manualPaymentBankAccountLine']),
+      manualPaymentAccountName: _scalarToString(m?['manualPaymentAccountName']),
+      manualPaymentAccountNo: _scalarToString(m?['manualPaymentAccountNo']),
       manualPaymentReceiptHint:
-          _stripeScalarToString(m?['manualPaymentReceiptHint']),
+          _scalarToString(m?['manualPaymentReceiptHint']),
       manualPaymentWhatsappDigits:
-          _stripeScalarToString(m?['manualPaymentWhatsappDigits']),
+          _scalarToString(m?['manualPaymentWhatsappDigits']),
     );
   }
 
-  static final PaymentSettingsSnapshot defaults = PaymentSettingsSnapshot(
+  static const PaymentSettingsSnapshot defaults = PaymentSettingsSnapshot(
     enableIap: true,
-    enableStripe: false,
     enableManual: true,
-    stripePublishableKey: null,
-    stripePriceIds: null,
-    stripeCheckoutUrls: null,
     manualPaymentFpsId: null,
     manualPaymentBankAccountLine: null,
     manualPaymentAccountName: null,
@@ -121,12 +72,6 @@ class PaymentSettingsSnapshot {
     manualPaymentReceiptHint: null,
     manualPaymentWhatsappDigits: null,
   );
-
-  String? stripeCheckoutUrlForKey(String key) {
-    final raw = stripeCheckoutUrls?[key]?.trim();
-    if (raw == null || raw.isEmpty) return null;
-    return raw;
-  }
 
   static String _stringOrFallback(String? raw, String fallback) {
     final v = raw?.trim() ?? '';

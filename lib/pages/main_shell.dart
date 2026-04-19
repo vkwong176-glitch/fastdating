@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../router/app_router.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
@@ -20,13 +19,13 @@ import 'message_page.dart';
 import 'subscription_page.dart';
 import 'nearby_page.dart';
 import 'publish_feed_page.dart';
-import 'activity_page.dart';
 import '../widgets/chat_quota_gate.dart';
 import '../widgets/chat_invite_popup_host.dart';
 import '../widgets/feed_heart_inbox_host.dart';
 import '../widgets/subscription_expiry_sound_host.dart';
 import '../services/firebase_bootstrap.dart';
 import '../services/in_app_notification_sound.dart';
+import '../services/manual_subscription_billing_service.dart';
 import '../services/screen_capture_platform.dart';
 import '../widgets/cookie_consent_banner.dart';
 
@@ -69,7 +68,22 @@ class _MainShellState extends State<MainShell> {
               ),
         );
       }
+      if (FirebaseBootstrap.isReady && auth.isLoginMember) {
+        unawaited(_processManualSubscriptionLifecycle());
+      }
     });
+  }
+
+  Future<void> _processManualSubscriptionLifecycle() async {
+    final notices =
+        await ManualSubscriptionBillingService.processCurrentUserAndConsumeUnreadNotice();
+    if (!mounted || notices.isEmpty) return;
+    final notif = Provider.of<NotificationProvider>(context, listen: false);
+    for (final item in notices) {
+      notif.addMessageNotification(item.title, item.body);
+    }
+    if (!mounted || !notif.hasPending) return;
+    notif.showAllPendingOnce(context);
   }
 
   @override

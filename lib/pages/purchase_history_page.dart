@@ -138,7 +138,8 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
     }
     switch (code) {
       case 'stripe':
-        return lang.getString('payment_method_stripe');
+      case 'pending_stripe':
+        return lang.getString('payment_method_legacy_removed');
       case 'manual_fps_wechat_bank':
         return lang.getString('payment_method_manual_transfer');
       case 'iap_app_store':
@@ -406,7 +407,7 @@ class _PurchaseReceiptCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: AppConstants.grey.withOpacity(0.08),
+            color: AppConstants.grey.withValues(alpha: 0.08),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -463,7 +464,7 @@ class _PurchaseReceiptCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppConstants.primaryColor.withOpacity(0.15),
+                          color: AppConstants.primaryColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(

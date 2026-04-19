@@ -81,6 +81,19 @@ class _AdPartnerPageState extends State<AdPartnerPage> {
     }
   }
 
+  Future<void> _dismissAdCoopBillingNotify() async {
+    final u = FirebaseAuth.instance.currentUser;
+    if (u == null || u.isAnonymous || !FirebaseBootstrap.isReady) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection(FirestorePaths.users)
+          .doc(u.uid)
+          .update({'adCoopBillingNotify': FieldValue.delete()});
+    } catch (e, st) {
+      debugPrint('dismissAdCoopBillingNotify: $e\n$st');
+    }
+  }
+
   double _bodyFontExtra(BuildContext context) {
     return MediaQuery.sizeOf(context).width >= AppConstants.layoutWideBreakpoint
         ? AppConstants.adPartnerPageDesktopBodyFontExtra
@@ -322,7 +335,7 @@ class _AdPartnerPageState extends State<AdPartnerPage> {
     try {
       await action(message);
     } finally {
-      slowTimer?.cancel();
+      slowTimer.cancel();
       message.dispose();
       if (pageContext.mounted) {
         Navigator.of(pageContext, rootNavigator: true).pop();
@@ -375,82 +388,118 @@ class _AdPartnerPageState extends State<AdPartnerPage> {
                         .doc(u.uid)
                         .snapshots(),
                     builder: (context, snap) {
-                      final raw = snap.data?.data()?['adCoopContentNotify'];
-                      if (raw is! Map) return const SizedBox.shrink();
-                      final kind = raw['kind']?.toString() ?? '';
-                      final msg = raw['message']?.toString() ?? '';
-                      final isRevision = kind == 'needs_revision';
-                      final bg = isRevision
-                          ? Colors.amber.shade50
-                          : Colors.green.shade50;
-                      final border = isRevision
-                          ? Colors.amber.shade700
-                          : Colors.green.shade700;
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                        child: Material(
-                          color: bg,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: border.withValues(alpha: 0.45)),
-                            ),
-                            padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(
-                                  isRevision
-                                      ? Icons.info_outline
-                                      : Icons.check_circle_outline,
-                                  color: border,
-                                  size: 22,
+                      final data = snap.data?.data() ?? const <String, dynamic>{};
+                      final contentRaw = data['adCoopContentNotify'];
+                      final billingRaw = data['adCoopBillingNotify'];
+                      if (contentRaw is! Map && billingRaw is! Map) {
+                        return const SizedBox.shrink();
+                      }
+
+                      Widget buildNotice({
+                        required Color bg,
+                        required Color border,
+                        required IconData icon,
+                        required String title,
+                        required String body,
+                        required VoidCallback onDismiss,
+                      }) {
+                        return Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                          child: Material(
+                            color: bg,
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: border.withValues(alpha: 0.45),
                                 ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        isRevision
-                                            ? langProvider.getString(
-                                                'ad_coop_notify_revision')
-                                            : langProvider.getString(
-                                                'ad_coop_notify_approved'),
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 14 + bf * 0.1,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                      if (isRevision && msg.isNotEmpty) ...[
-                                        const SizedBox(height: 6),
+                              ),
+                              padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(icon, color: border, size: 22),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
                                         Text(
-                                          msg,
+                                          title,
                                           style: TextStyle(
-                                            fontSize: 13 + bf * 0.1,
-                                            height: 1.35,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 14 + bf * 0.1,
                                             color: Colors.black87,
                                           ),
                                         ),
+                                        if (body.trim().isNotEmpty) ...[
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            body.trim(),
+                                            style: TextStyle(
+                                              fontSize: 13 + bf * 0.1,
+                                              height: 1.35,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                        ],
                                       ],
-                                    ],
+                                    ),
                                   ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.close),
-                                  tooltip: langProvider
-                                      .getString('ad_coop_notify_dismiss'),
-                                  onPressed: _dismissAdCoopContentNotify,
-                                ),
-                              ],
+                                  IconButton(
+                                    icon: const Icon(Icons.close),
+                                    tooltip: langProvider.getString('ad_coop_notify_dismiss'),
+                                    onPressed: onDismiss,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      );
+                        );
+                      }
+
+                      final notices = <Widget>[];
+                      if (billingRaw is Map) {
+                        final title = billingRaw['title']?.toString() ?? '';
+                        final body = billingRaw['body']?.toString() ?? '';
+                        notices.add(
+                          buildNotice(
+                            bg: Colors.orange.shade50,
+                            border: Colors.deepOrange.shade700,
+                            icon: Icons.campaign_outlined,
+                            title: title.isEmpty
+                                ? langProvider.getString('ad_coop_billing_notify_title')
+                                : title,
+                            body: body,
+                            onDismiss: _dismissAdCoopBillingNotify,
+                          ),
+                        );
+                      }
+                      if (contentRaw is Map) {
+                        final kind = contentRaw['kind']?.toString() ?? '';
+                        final msg = contentRaw['message']?.toString() ?? '';
+                        final isRevision = kind == 'needs_revision';
+                        notices.add(
+                          buildNotice(
+                            bg: isRevision
+                                ? Colors.amber.shade50
+                                : Colors.green.shade50,
+                            border: isRevision
+                                ? Colors.amber.shade700
+                                : Colors.green.shade700,
+                            icon: isRevision
+                                ? Icons.info_outline
+                                : Icons.check_circle_outline,
+                            title: isRevision
+                                ? langProvider.getString('ad_coop_notify_revision')
+                                : langProvider.getString('ad_coop_notify_approved'),
+                            body: isRevision ? msg : '',
+                            onDismiss: _dismissAdCoopContentNotify,
+                          ),
+                        );
+                      }
+                      return Column(children: notices);
                     },
                   );
                 },
@@ -468,7 +517,7 @@ class _AdPartnerPageState extends State<AdPartnerPage> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: AppConstants.grey.withOpacity(0.08),
+                      color: AppConstants.grey.withValues(alpha: 0.08),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
@@ -517,7 +566,7 @@ class _AdPartnerPageState extends State<AdPartnerPage> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: AppConstants.grey.withOpacity(0.08),
+                      color: AppConstants.grey.withValues(alpha: 0.08),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
@@ -560,7 +609,7 @@ class _AdPartnerPageState extends State<AdPartnerPage> {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFB6C1).withOpacity(0.5),
+                  color: const Color(0xFFFFB6C1).withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(40),
                 ),
                 child: Stack(
@@ -748,7 +797,7 @@ class _AdPartnerPageState extends State<AdPartnerPage> {
                 ListTile(
                   leading: const Icon(Icons.smartphone),
                   title: const Text('App Store／Google Play'),
-                  subtitle: Text(
+                  subtitle: const Text(
                     kIsWeb
                         ? '請使用 iOS／Android App 完成應用程式內購買'
                         : '依裝置使用 App Store 或 Google Play 付款',
@@ -880,7 +929,7 @@ class _AdPartnerPageState extends State<AdPartnerPage> {
       if (!mounted) return;
       await StoreIapService.instance.completePurchase(details);
       if (!mounted) return;
-      final paidOrderId = await SubscriptionOrderService.recordOrder(
+      await SubscriptionOrderService.recordOrder(
         planName: planName,
         months: months,
         totalPrice: product.price,

@@ -25,12 +25,16 @@ class AdminDashboardPage extends StatefulWidget {
 }
 
 class _AdminDashboardPageState extends State<AdminDashboardPage> {
+  bool _runningManualSweep = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _ensureFirebaseSessionForBackend();
       await _purgeStaleUnpaidOrdersGlobally();
+      await _processManualSubscriptionBillingSweep(showResult: false);
+      await _processAdCoopBillingSweep(showResult: false);
     });
   }
 
@@ -60,6 +64,53 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _processManualSubscriptionBillingSweep({
+    required bool showResult,
+  }) async {
+    if (!FirebaseBootstrap.isReady) return;
+    await ensureFirebaseIdentityForAdminBackend();
+    final n = await AdminBackendService.instance.processManualSubscriptionBillingSweep();
+    if (!mounted || !showResult) return;
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          lang.getString('admin_manual_sweep_done').replaceAll('{n}', '$n'),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _processAdCoopBillingSweep({
+    required bool showResult,
+  }) async {
+    if (!FirebaseBootstrap.isReady) return;
+    await ensureFirebaseIdentityForAdminBackend();
+    final n = await AdminBackendService.instance.processAdCoopBillingSweep();
+    if (!mounted || !showResult) return;
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          lang.getString('admin_ad_coop_sweep_done').replaceAll('{n}', '$n'),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _runManualSweepNow() async {
+    if (_runningManualSweep) return;
+    setState(() => _runningManualSweep = true);
+    try {
+      await _processManualSubscriptionBillingSweep(showResult: true);
+      await _processAdCoopBillingSweep(showResult: true);
+    } finally {
+      if (mounted) {
+        setState(() => _runningManualSweep = false);
+      }
+    }
   }
 
   @override
@@ -134,38 +185,88 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             stops: [0.0, 0.4, 1.0],
           ),
         ),
-        child: ListView.builder(
+        child: ListView(
           padding: const EdgeInsets.all(16),
-          itemCount: items.length,
-          itemBuilder: (context, i) {
-            final t = items[i];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Material(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(AppConstants.cardRadius),
-                elevation: 3,
-                shadowColor: Colors.black26,
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppConstants.primaryColor.withValues(alpha: 0.15),
-                    foregroundColor: AppConstants.primaryColor,
-                    child: Icon(t.icon, size: 22),
-                  ),
-                  title: Text(t.title, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push<void>(
-                      context,
-                      MaterialPageRoute<void>(
-                        builder: (_) => AllowAdminScreenshot(child: t.page),
+          children: [
+            Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppConstants.cardRadius),
+              elevation: 3,
+              shadowColor: Colors.black26,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      lang.getString('admin_manual_sweep_title'),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
                       ),
-                    );
-                  },
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      lang.getString('admin_manual_sweep_body'),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade800,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: _runningManualSweep ? null : _runManualSweepNow,
+                      icon: _runningManualSweep
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.sync),
+                      label: Text(
+                        _runningManualSweep
+                            ? lang.getString('admin_manual_sweep_running')
+                            : lang.getString('admin_manual_sweep_btn'),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            );
-          },
+            ),
+            const SizedBox(height: 12),
+            ...items.map((t) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(AppConstants.cardRadius),
+                  elevation: 3,
+                  shadowColor: Colors.black26,
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: AppConstants.primaryColor.withValues(alpha: 0.15),
+                      foregroundColor: AppConstants.primaryColor,
+                      child: Icon(t.icon, size: 22),
+                    ),
+                    title: Text(t.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push<void>(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (_) => AllowAdminScreenshot(child: t.page),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            }),
+          ],
         ),
       ),
     ),

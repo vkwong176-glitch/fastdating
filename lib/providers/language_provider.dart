@@ -92,13 +92,14 @@ class LanguageProvider with ChangeNotifier {
     }
   }
 
-  /// 活動／訂閱同款三選一：App Store·Google Play、Stripe、FPS／WeChat／銀行。
+  /// 活動／訂閱付款方式標籤。
   String paymentMethodLabelForActivity(String? code) {
     final c = code?.trim();
     if (c == null || c.isEmpty) return getString('payment_method_unknown');
     switch (c) {
       case 'stripe':
-        return getString('pay_choice_stripe');
+      case 'pending_stripe':
+        return getString('payment_method_legacy_removed');
       case 'manual_fps_wechat_bank':
         return getString('pay_choice_manual');
       case 'iap_stores':
@@ -267,7 +268,8 @@ class LanguageProvider with ChangeNotifier {
     'payment_method': '付款方式',
     'no_purchase_records': '暫無購買記錄',
     'payment_method_unknown': '—',
-    'payment_method_stripe': 'Stripe 網上付款',
+    'payment_method_stripe': '已停用舊制網上付款',
+    'payment_method_legacy_removed': '已停用舊制網上付款',
     'payment_method_manual_transfer': 'FPS／WeChat／銀行轉帳',
     'payment_method_iap_app_store': 'App Store 內購買',
     'payment_method_iap_google_play': 'Google Play 內購買',
@@ -404,6 +406,7 @@ class LanguageProvider with ChangeNotifier {
     'ad_coop_notify_approved': '您的廣告貼文內容已通過審核。',
     'ad_coop_notify_revision': '管理員請您修改廣告貼文：',
     'ad_coop_notify_dismiss': '關閉',
+    'ad_coop_billing_notify_title': '廣告刊登通知',
     'admin_sec_j': '廣告到期提示',
     'admin_sec_k': '懷疑違規內容',
     'admin_sec_k_empty': '目前沒有待審貼文',
@@ -526,7 +529,7 @@ class LanguageProvider with ChangeNotifier {
     'admin_pay_manual_fps_wechat_bank': '其他（FPS／WeChat Pay／銀行轉帳）',
     'admin_pay_other_demo_web': '其他（示範／Web 無法使用商店）',
     'admin_pay_other_demo': '其他（示範）',
-    'admin_pay_stripe': 'Stripe',
+    'admin_pay_stripe': '已停用舊制付款',
     'admin_pay_iap_ios': 'App Store（IAP）',
     'admin_pay_iap_android': 'Google Play（IAP）',
     'admin_sec_d_add': '加入配對庫',
@@ -541,6 +544,13 @@ class LanguageProvider with ChangeNotifier {
     'admin_sec_e_activity_empty': '尚無活動報名訂單（會員於前台活動頁完成報名後會顯示）。',
     'admin_sec_e_purged_unpaid': '已自動刪除 {n} 筆逾一個月未付款的活動訂單。',
     'admin_purge_unpaid_orders_snackbar': '已自動刪除 {n} 筆逾一個月未付款的訂單（訂閱／廣告／活動）。',
+    'admin_manual_sweep_title': '手動月繳即時檢查',
+    'admin_manual_sweep_body':
+        '按一下即可立即執行手動月繳 sweep，不用等每日排程。系統會即時補發提醒、停權逾期未付款會員，並更新相關訂單與會員狀態。',
+    'admin_manual_sweep_btn': '立即執行 sweep',
+    'admin_manual_sweep_running': '執行中…',
+    'admin_manual_sweep_done': '已即時執行手動月繳檢查，更新 {n} 筆紀錄。',
+    'admin_ad_coop_sweep_done': '已即時執行廣告刊登月繳檢查，更新 {n} 筆紀錄。',
     'admin_activity_summary': '活動內容摘要',
     'admin_sec_f_add': '新增活動',
     'admin_sec_f_upload_image': '上載圖片',
@@ -560,18 +570,17 @@ class LanguageProvider with ChangeNotifier {
     'admin_sec_f_body_hint': '列表與同步用內文；若未填「價錢」，第一行可作價錢顯示（舊版相容）。',
     'admin_sec_f_registration_cap': '報名人數（參加者單次可選 1～10 人；不設活動總報名上限）',
     'pay_choice_iap': 'App Store／Google Play',
-    'pay_choice_stripe': 'Stripe 信用卡付款',
+    'pay_choice_stripe': '已停用舊制網上付款',
     'pay_choice_manual': 'FPS／WeChat／銀行戶口',
     'subscription_iap_subtitle': '依裝置使用 App Store 或 Google Play 付款',
-    'subscription_stripe_subtitle': '連結至 Stripe 以信用卡付款',
+    'subscription_stripe_subtitle': '此付款方式已停用',
     'subscription_manual_subtitle': '顯示轉帳資料，收據經 WhatsApp 傳送',
     'activity_details_label': '活動詳情',
     'activity_reg_headcount': '報名人數',
     'activity_choose_payment': '付款方式',
     'activity_login_required': '請先登入一般會員帳戶（勿使用訪客）以報名及付款。',
     'activity_order_failed': '無法建立訂單，請確認已登入或網路正常。',
-    'activity_stripe_url_missing':
-        '無法開啟 Stripe 付款（請確認已部署 Cloud Functions、後台已開啟 Stripe 並填好 Price ID）。',
+    'activity_stripe_url_missing': '此舊制網上付款方式已停用。',
     'activity_order_manual_snackbar': '已提交活動報名訂單，請於 WhatsApp 傳送收據。',
     'activity_whatsapp_prefill': '我想報名活動：',
     'activity_whatsapp_prefill_tail': ' 位，總額 ',
@@ -605,7 +614,7 @@ class LanguageProvider with ChangeNotifier {
     'admin_src_b':
         '「users」：註冊/登入與個人檔同步（memberNo、email、displayName、phone、gender、age、subscriptionActive、tags、sentence、avatar、updatedAt）。「user_blacklist」：以 UID 阻擋。',
     'admin_src_c':
-        '「subscription_orders」：後台補登訂單；「payments」「subscriptions」：App／IAP／Stripe 經後端寫入之付款與訂閱紀錄（與 PaymentBackendService 設計一致）。',
+        '「subscription_orders」：後台補登訂單；「payments」「subscriptions」：App／IAP 與歷史付款資料之紀錄（與 PaymentBackendService 設計一致）。',
     'admin_src_d':
         '「upgrade_matching_pool」：升級配對候選；可從 users.subscriptionActive＝true 同步。另見「matches」互配、「users」探索。',
     'admin_src_e':
@@ -836,7 +845,8 @@ class LanguageProvider with ChangeNotifier {
     'payment_method': '付款方式',
     'no_purchase_records': '暂无购买记录',
     'payment_method_unknown': '—',
-    'payment_method_stripe': 'Stripe 网上付款',
+    'payment_method_stripe': '已停用旧制网上付款',
+    'payment_method_legacy_removed': '已停用旧制网上付款',
     'payment_method_manual_transfer': 'FPS／微信／银行转账',
     'payment_method_iap_app_store': 'App Store 内购买',
     'payment_method_iap_google_play': 'Google Play 内购买',
@@ -972,6 +982,7 @@ class LanguageProvider with ChangeNotifier {
     'ad_coop_notify_approved': '您的广告贴文内容已通过审核。',
     'ad_coop_notify_revision': '管理员请您修改广告贴文：',
     'ad_coop_notify_dismiss': '关闭',
+    'ad_coop_billing_notify_title': '广告刊登通知',
     'admin_sec_j': '广告到期提示',
     'admin_sec_k': '怀疑违规内容',
     'admin_sec_k_empty': '目前没有待审贴文',
@@ -1094,7 +1105,7 @@ class LanguageProvider with ChangeNotifier {
     'admin_pay_manual_fps_wechat_bank': '其他（FPS／微信／银行转账）',
     'admin_pay_other_demo_web': '其他（示范／Web 无法使用商店）',
     'admin_pay_other_demo': '其他（示范）',
-    'admin_pay_stripe': 'Stripe',
+    'admin_pay_stripe': '已停用旧制付款',
     'admin_pay_iap_ios': 'App Store（IAP）',
     'admin_pay_iap_android': 'Google Play（IAP）',
     'admin_sec_d_add': '加入配对库',
@@ -1109,6 +1120,13 @@ class LanguageProvider with ChangeNotifier {
     'admin_sec_e_activity_empty': '尚无活动报名订单（会员于前台活动页完成报名后会显示）。',
     'admin_sec_e_purged_unpaid': '已自动删除 {n} 笔逾一个月未付款的活动订单。',
     'admin_purge_unpaid_orders_snackbar': '已自动删除 {n} 笔逾一个月未付款的订单（订阅／广告／活动）。',
+    'admin_manual_sweep_title': '手动月缴即时检查',
+    'admin_manual_sweep_body':
+        '按一下即可立即执行手动月缴 sweep，不用等每日排程。系统会即时补发提醒、停权逾期未付款会员，并更新相关订单与会员状态。',
+    'admin_manual_sweep_btn': '立即执行 sweep',
+    'admin_manual_sweep_running': '执行中…',
+    'admin_manual_sweep_done': '已即时执行手动月缴检查，更新 {n} 笔记录。',
+    'admin_ad_coop_sweep_done': '已即时执行广告刊登月缴检查，更新 {n} 笔记录。',
     'admin_activity_summary': '活动内容摘要',
     'admin_sec_f_add': '新增活动',
     'admin_sec_f_upload_image': '上传图片',
@@ -1128,18 +1146,17 @@ class LanguageProvider with ChangeNotifier {
     'admin_sec_f_body_hint': '列表与同步用正文；若未填「价钱」，第一行可作价钱显示（旧版兼容）。',
     'admin_sec_f_registration_cap': '报名人数（参加者单次可选 1～10 人；不设活动总报名上限）',
     'pay_choice_iap': 'App Store／Google Play',
-    'pay_choice_stripe': 'Stripe 信用卡付款',
+    'pay_choice_stripe': '已停用旧制网上付款',
     'pay_choice_manual': 'FPS／微信／银行户口',
     'subscription_iap_subtitle': '依设备使用 App Store 或 Google Play 付款',
-    'subscription_stripe_subtitle': '链接至 Stripe 以信用卡付款',
+    'subscription_stripe_subtitle': '此付款方式已停用',
     'subscription_manual_subtitle': '显示转账资料，收据经 WhatsApp 发送',
     'activity_details_label': '活动详情',
     'activity_reg_headcount': '报名人数',
     'activity_choose_payment': '付款方式',
     'activity_login_required': '请先登录一般会员账户（勿使用访客）以报名及付款。',
     'activity_order_failed': '无法建立订单，请确认已登录或网络正常。',
-    'activity_stripe_url_missing':
-        '无法打开 Stripe 付款（请确认已部署 Cloud Functions、后台已开启 Stripe 并填写 Price ID）。',
+    'activity_stripe_url_missing': '此旧制网上付款方式已停用。',
     'activity_order_manual_snackbar': '已提交活动报名订单，请于 WhatsApp 发送收据。',
     'activity_whatsapp_prefill': '我想报名活动：',
     'activity_whatsapp_prefill_tail': ' 位，总额 ',
@@ -1173,7 +1190,7 @@ class LanguageProvider with ChangeNotifier {
     'admin_src_b':
         '「users」：注册/登录与个人档同步（memberNo、email、displayName、phone、gender、age、subscriptionActive、tags、sentence、avatar、updatedAt）。「user_blacklist」：按 UID 封禁。',
     'admin_src_c':
-        '「subscription_orders」：后台补登订单；「payments」「subscriptions」：App／IAP／Stripe 经后端写入的付款与订阅记录。',
+        '「subscription_orders」：后台补登订单；「payments」「subscriptions」：App／IAP 与历史付款资料记录。',
     'admin_src_d':
         '「upgrade_matching_pool」：升级配对候选；可从 users.subscriptionActive＝true 同步。另见「matches」互配、「users」探索。',
     'admin_src_e':
@@ -1416,7 +1433,8 @@ class LanguageProvider with ChangeNotifier {
     'payment_method': 'Payment method',
     'no_purchase_records': 'No purchase records yet',
     'payment_method_unknown': '—',
-    'payment_method_stripe': 'Stripe (web)',
+    'payment_method_stripe': 'Legacy web payment (disabled)',
+    'payment_method_legacy_removed': 'Legacy web payment (disabled)',
     'payment_method_manual_transfer': 'FPS / WeChat / bank transfer',
     'payment_method_iap_app_store': 'App Store in-app purchase',
     'payment_method_iap_google_play': 'Google Play in-app purchase',
@@ -1571,6 +1589,7 @@ class LanguageProvider with ChangeNotifier {
     'ad_coop_notify_approved': 'Your ad post content has been approved.',
     'ad_coop_notify_revision': 'Please revise your ad post:',
     'ad_coop_notify_dismiss': 'Dismiss',
+    'ad_coop_billing_notify_title': 'Ad promotion notice',
     'admin_sec_j': 'Ad expiry reminders',
     'admin_sec_k': 'Suspected violation posts',
     'admin_sec_k_empty': 'No posts pending review',
@@ -1709,7 +1728,7 @@ class LanguageProvider with ChangeNotifier {
         'Other (FPS / WeChat Pay / bank transfer)',
     'admin_pay_other_demo_web': 'Other (demo / IAP N/A on web)',
     'admin_pay_other_demo': 'Other (demo)',
-    'admin_pay_stripe': 'Stripe',
+    'admin_pay_stripe': 'Legacy disabled payment',
     'admin_pay_iap_ios': 'App Store (IAP)',
     'admin_pay_iap_android': 'Google Play (IAP)',
     'admin_sec_d_add': 'Add to pool',
@@ -1727,6 +1746,15 @@ class LanguageProvider with ChangeNotifier {
         'Removed {n} unpaid activity order(s) older than one month.',
     'admin_purge_unpaid_orders_snackbar':
         'Removed {n} unpaid order(s) older than one month (subscription / ads / activities).',
+    'admin_manual_sweep_title': 'Run Manual Billing Sweep',
+    'admin_manual_sweep_body':
+        'Run the manual monthly billing sweep immediately instead of waiting for the daily scheduler. This will send due reminders, suspend overdue unpaid members, and refresh related order/member status right away.',
+    'admin_manual_sweep_btn': 'Run sweep now',
+    'admin_manual_sweep_running': 'Running…',
+    'admin_manual_sweep_done':
+        'Manual monthly billing sweep completed. Updated {n} record(s).',
+    'admin_ad_coop_sweep_done':
+        'Ad promotion monthly billing sweep completed. Updated {n} record(s).',
     'admin_activity_summary': 'Event description',
     'admin_sec_f_add': 'New event',
     'admin_sec_f_upload_image': 'Upload image',
@@ -1751,11 +1779,11 @@ class LanguageProvider with ChangeNotifier {
     'admin_sec_f_registration_cap':
         'Headcount per signup (1–10); no total event capacity limit',
     'pay_choice_iap': 'App Store / Google Play',
-    'pay_choice_stripe': 'Stripe card payment',
+    'pay_choice_stripe': 'Legacy web payment (disabled)',
     'pay_choice_manual': 'FPS / WeChat / bank transfer',
     'subscription_iap_subtitle':
         'Pay with App Store or Google Play on your device',
-    'subscription_stripe_subtitle': 'Open Stripe checkout for card payment',
+    'subscription_stripe_subtitle': 'This payment method has been disabled',
     'subscription_manual_subtitle':
         'Bank transfer details; send receipt via WhatsApp',
     'activity_details_label': 'Event details',
@@ -1765,7 +1793,7 @@ class LanguageProvider with ChangeNotifier {
         'Sign in with a member account (not guest) to register and pay.',
     'activity_order_failed': 'Could not create order. Check login and network.',
     'activity_stripe_url_missing':
-        'Could not open Stripe checkout. Deploy Functions, enable Stripe in admin, and set Price IDs.',
+        'This legacy web payment method has been disabled.',
     'activity_order_manual_snackbar':
         'Activity signup submitted. Please send your receipt on WhatsApp.',
     'activity_whatsapp_prefill': 'I want to join the event: ',
@@ -1801,7 +1829,7 @@ class LanguageProvider with ChangeNotifier {
     'admin_src_b':
         'users: synced with signup/profile (memberNo, email, displayName, phone, gender, age, subscriptionActive, tags, sentence, avatar, updatedAt). user_blacklist blocks by UID.',
     'admin_src_c':
-        'subscription_orders: manual orders; payments & subscriptions: app/IAP/Stripe records (PaymentBackendService design).',
+    'subscription_orders: manual orders; payments & subscriptions: app/IAP and legacy payment records.',
     'admin_src_d':
         'upgrade_matching_pool: upgraded matching pool; sync from users.subscriptionActive=true. See also matches, users for discovery.',
     'admin_src_e':

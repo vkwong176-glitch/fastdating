@@ -1,15 +1,9 @@
 rules_version = '2';
 // 正式上線前請依集合細分權限；目前僅允許已登入使用者讀寫（與 Firebase Auth 搭配）。
-// [payment_settings/private_stripe] 僅後端 Admin SDK／Callable 可寫入，客戶端一律拒絕。
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isStripePrivateDocPath() {
-      return request.path
-        == /databases/$(database)/documents/payment_settings/private_stripe;
-    }
-
     match /{document=**} {
-      allow read, write: if request.auth != null && !isStripePrivateDocPath();
+      allow read, write: if request.auth != null;
     }
   }
 }
