@@ -129,8 +129,6 @@ class LanguageProvider with ChangeNotifier {
     'menu': '選單',
     'file': '檔案',
     'publish': '邀聊通知',
-    'publish_invites_section_empty':
-        '暫無待處理的邀聊。他人從首頁向你發出邀請後會顯示於此，可在此接受或拒絕。',
     'thinking_prompt': '你在想什麼？',
     'one_sentence': '一句話',
     'gift_shop': '禮品店',
@@ -713,8 +711,6 @@ class LanguageProvider with ChangeNotifier {
     'menu': '菜单',
     'file': '档案',
     'publish': '邀聊通知',
-    'publish_invites_section_empty':
-        '暂无待处理的邀聊。他人从首页向你发出邀请后将显示于此，可在此接受或拒绝。',
     'thinking_prompt': '你在想什么？',
     'one_sentence': '一句话',
     'gift_shop': '礼品店',
@@ -1294,8 +1290,6 @@ class LanguageProvider with ChangeNotifier {
     'menu': 'Menu',
     'file': 'Profile',
     'publish': 'Chat invites',
-    'publish_invites_section_empty':
-        'No pending chat invitations. Invites will appear here so you can accept or decline.',
     'thinking_prompt': 'What are you thinking?',
     'one_sentence': 'One sentence',
     'gift_shop': 'Gift shop',

@@ -232,18 +232,7 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
             );
           }
           if (list.isEmpty) {
-            final lang = Provider.of<LanguageProvider>(context, listen: false);
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                lang.getString('publish_invites_section_empty'),
-                style: TextStyle(
-                  fontSize: 14 + desktopFs + _kPublishContentTextBoost,
-                  color: AppConstants.grey,
-                  height: 1.45,
-                ),
-              ),
-            );
+            return const SizedBox.shrink();
           }
           return Column(
             children: list.map((item) {
