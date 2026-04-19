@@ -36,8 +36,13 @@ bool _isPublishDesktopLayout(BuildContext context) =>
 const double _kPublishLeadingInset = 0.5 * AppConstants.logicalPxPerCm;
 const double _kPublishActionsRightInset = 0.7 * AppConstants.logicalPxPerCm;
 const double _kPublishActionGap = 0.1 * AppConstants.logicalPxPerCm;
-const double _kPublishLeadingWidth =
-    MainTabAppBar.actionButtonSize + _kPublishLeadingInset;
+/// 左欄：內距 + 首頁掣 + 間距 +「想講～」
+const double _kPublishAppBarAfterHomeGap = 8.0;
+const double _kPublishAppBarTalkChipEstWidth = 104.0;
+const double _kPublishAppBarLeadingWidth = _kPublishLeadingInset +
+    MainTabAppBar.actionButtonSize +
+    _kPublishAppBarAfterHomeGap +
+    _kPublishAppBarTalkChipEstWidth;
 const double _kPublishActionsWidth =
     2 * MainTabAppBar.actionButtonSize + _kPublishActionGap;
 
@@ -482,25 +487,33 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
 
   @override
   Widget build(BuildContext context) {
+    final langProvider = Provider.of<LanguageProvider>(context);
     final auth = Provider.of<AuthProvider>(context);
     final desktopFs =
         _isPublishDesktopLayout(context) ? _kPublishDesktopFontBoost : 0.0;
     return Scaffold(
       backgroundColor: AppConstants.backgroundColor,
       appBar: MainTabAppBar(
-        title: '',
-        titleWidget: _buildPublishAppBarTalkButton(desktopFs),
+        title: langProvider.getString('publish'),
         slotWidth: _kPublishActionsWidth,
-        leading: MainTabAppBar.buildHomeLeadingButton(
-          onPressed: MainTabAppBar.buildReturnHomeHandler(
-            context,
-            mobileFallback: () =>
-                Provider.of<NavProvider>(context, listen: false)
-                    .setCurrentIndex(0),
-          ),
+        leading: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            MainTabAppBar.buildHomeLeadingButton(
+              onPressed: MainTabAppBar.buildReturnHomeHandler(
+                context,
+                mobileFallback: () =>
+                    Provider.of<NavProvider>(context, listen: false)
+                        .setCurrentIndex(0),
+              ),
+            ),
+            const SizedBox(width: _kPublishAppBarAfterHomeGap),
+            _buildPublishAppBarTalkButton(desktopFs),
+          ],
         ),
         leadingLeftInset: _kPublishLeadingInset,
-        leadingWidth: _kPublishLeadingWidth,
+        leadingWidth: _kPublishAppBarLeadingWidth,
         actionsRightInset: _kPublishActionsRightInset,
         actions: [
           MainTabAppBar.buildCircleActionButton(
