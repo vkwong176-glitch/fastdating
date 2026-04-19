@@ -227,28 +227,34 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
     double desktopFs,
   ) {
     final lang = Provider.of<LanguageProvider>(context, listen: false);
+    final hasInvites = (snapshot.data ?? []).isNotEmpty;
+    final headingStyle = TextStyle(
+      fontSize: 15 + desktopFs + _kPublishContentTextBoost,
+      fontWeight: FontWeight.w600,
+      color: AppConstants.grey,
+    );
+    final introStyle = TextStyle(
+      fontSize: 13 + desktopFs + _kPublishContentTextBoost,
+      fontWeight: FontWeight.w400,
+      height: 1.45,
+      color: AppConstants.grey,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           lang.getString('publish_invites_section_heading'),
-          style: TextStyle(
-            fontSize: 15 + desktopFs + _kPublishContentTextBoost,
-            fontWeight: FontWeight.w600,
-            color: AppConstants.grey,
-          ),
+          style: headingStyle,
         ),
-        const SizedBox(height: 6),
-        Text(
-          lang.getString('publish_invites_section_intro'),
-          style: TextStyle(
-            fontSize: 13 + desktopFs + _kPublishContentTextBoost,
-            fontWeight: FontWeight.w400,
-            height: 1.45,
-            color: AppConstants.grey,
+        if (hasInvites) ...[
+          const SizedBox(height: 6),
+          Text(
+            lang.getString('publish_invites_section_intro'),
+            style: introStyle,
           ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 12),
+        ] else
+          const SizedBox(height: 12),
         _buildFirestoreInvitesFromSnapshot(snapshot, desktopFs),
       ],
     );
@@ -256,28 +262,34 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
 
   Widget _buildDemoInviteSectionWithHeading(double desktopFs) {
     final lang = Provider.of<LanguageProvider>(context, listen: false);
+    final hasInvites = _invitations.isNotEmpty;
+    final headingStyle = TextStyle(
+      fontSize: 15 + desktopFs + _kPublishContentTextBoost,
+      fontWeight: FontWeight.w600,
+      color: AppConstants.grey,
+    );
+    final introStyle = TextStyle(
+      fontSize: 13 + desktopFs + _kPublishContentTextBoost,
+      fontWeight: FontWeight.w400,
+      height: 1.45,
+      color: AppConstants.grey,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           lang.getString('publish_invites_section_heading'),
-          style: TextStyle(
-            fontSize: 15 + desktopFs + _kPublishContentTextBoost,
-            fontWeight: FontWeight.w600,
-            color: AppConstants.grey,
-          ),
+          style: headingStyle,
         ),
-        const SizedBox(height: 6),
-        Text(
-          lang.getString('publish_invites_section_intro'),
-          style: TextStyle(
-            fontSize: 13 + desktopFs + _kPublishContentTextBoost,
-            fontWeight: FontWeight.w400,
-            height: 1.45,
-            color: AppConstants.grey,
+        if (hasInvites) ...[
+          const SizedBox(height: 6),
+          Text(
+            lang.getString('publish_invites_section_intro'),
+            style: introStyle,
           ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 12),
+        ] else
+          const SizedBox(height: 12),
         _buildDemoInvitationSection(desktopFs),
       ],
     );
