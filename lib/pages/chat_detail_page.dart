@@ -23,8 +23,6 @@ import '../services/in_app_notification_sound.dart';
 import '../services/firebase_bootstrap.dart';
 import '../services/firestore_paths.dart';
 import '../services/chat_receipt_cookies.dart';
-import 'settings_page.dart';
-import 'activity_page.dart';
 import 'camera_capture_page.dart';
 import '../widgets/chat_quota_gate.dart';
 
@@ -57,7 +55,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   bool _useCloudChat(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (!FirebaseBootstrap.isReady || auth.uid == null) return false;
-    return widget.userId.length >= 20;
+    final id = widget.userId;
+    if (id.startsWith('demo_')) return false;
+    return id.length >= 15;
   }
 
   String _conversationId(BuildContext context) {
@@ -66,7 +66,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     if (widget.conversationId != null && widget.conversationId!.isNotEmpty) {
       return widget.conversationId!;
     }
-    if (widget.userId.length >= 20) {
+    if (widget.userId.length >= 15 && !widget.userId.startsWith('demo_')) {
       return ChatFirestoreService.pairConversationId(auth.uid!, widget.userId);
     }
     return '';
@@ -659,20 +659,19 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         });
 
         /// 對方留在對話內時仍會持續收到新訊息；僅首次標已讀會漏掉後續訊息之 [readAt]，故用 debounce 重複標記。
-        if (docs.isNotEmpty) {
-          _markPeerReadDebounce?.cancel();
-          _markPeerReadDebounce = Timer(const Duration(milliseconds: 450), () {
-            if (!mounted) return;
-            ChatFirestoreService.instance
-                .markPeerOutgoingMessagesAsReadByViewer(
-              conversationId: cid,
-              peerUid: widget.userId,
-            )
-                .catchError((Object e, StackTrace st) {
-              debugPrint('markPeerRead $e\n$st');
-            });
+        /// 空對話也需呼叫：將 [unreadCountByUid] 歸零（訊息列表紅點）。
+        _markPeerReadDebounce?.cancel();
+        _markPeerReadDebounce = Timer(const Duration(milliseconds: 450), () {
+          if (!mounted) return;
+          ChatFirestoreService.instance
+              .markPeerOutgoingMessagesAsReadByViewer(
+            conversationId: cid,
+            peerUid: widget.userId,
+            viewerUid: myUid,
+          ).catchError((Object e, StackTrace st) {
+            debugPrint('markPeerRead $e\n$st');
           });
-        }
+        });
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients) {
             _scrollController

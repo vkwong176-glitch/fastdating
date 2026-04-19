@@ -2414,6 +2414,21 @@ Widget _adminSubscriptionOrderCard(
   final m = d.data();
   final uid = (m['userId'] as String?) ?? '';
   final plan = (m['planName'] ?? m['planId'] ?? '—').toString();
+  final monthsRaw = (m['months'] ?? '').toString().trim();
+  /// 與會員「購買記錄」一致：方案名 · N（個月／months）
+  final planDetail = monthsRaw.isEmpty
+      ? plan
+      : '$plan · $monthsRaw${lang.getString('months')}';
+  /// 會員端 [recordOrder] 寫入 [totalPrice]；後台 [upsertSubscriptionOrder] 可能僅有 [amount]。
+  final priceShown = () {
+    final t = m['totalPrice'];
+    if (t != null && t.toString().trim().isNotEmpty) return t.toString();
+    final a = m['amount'];
+    if (a == null) return '—';
+    if (a is num) return a.toString();
+    final s = a.toString().trim();
+    return s.isEmpty ? '—' : s;
+  }();
   final pmRaw = (m['paymentMethod'] as String?) ?? '';
   final pmLabel = _subscriptionPaymentMethodLabel(lang, pmRaw);
   final exp = m['expiresAt'];
@@ -2620,11 +2635,20 @@ Widget _adminSubscriptionOrderCard(
                     const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 4),
-              if (!isAd)
+              if (!isAd) ...[
                 Text(
-                  '${lang.getString('admin_sec_c_plan')}: $plan',
+                  '${lang.getString('admin_sec_c_plan')}: $planDetail',
                   style: const TextStyle(fontSize: 14),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  '${lang.getString('payment_amount')}: $priceShown',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
               if (isAd) ...[
                 const SizedBox(height: 4),
                 Text(
@@ -2633,7 +2657,7 @@ Widget _adminSubscriptionOrderCard(
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${lang.getString('admin_sec_i_amount')}: ${(m['totalPrice'] ?? '—').toString()}',
+                  '${lang.getString('admin_sec_i_amount')}: $priceShown',
                   style: const TextStyle(fontSize: 14),
                 ),
               ],
@@ -4716,9 +4740,13 @@ class _AdminSectionPromotionPostPageState
   final TextEditingController _titleCtrl = TextEditingController();
   final TextEditingController _linkCtrl = TextEditingController();
   final TextEditingController _contentCtrl = TextEditingController();
+  final ScrollController _promotionScrollController = ScrollController();
 
   Uint8List? _pickedImageBytes;
   String _pickedImageDataUrl = '';
+  /// 編輯既有貼文時，沿用 Firestore 內既有圖片 URL（未重選圖時）。
+  String _editingRemoteImageUrl = '';
+  String? _editingPostId;
   int _selectedPromotionMonths = _defaultPromotionMonths;
   bool _imageBusy = false;
   bool _publishing = false;
@@ -4728,7 +4756,51 @@ class _AdminSectionPromotionPostPageState
     _titleCtrl.dispose();
     _linkCtrl.dispose();
     _contentCtrl.dispose();
+    _promotionScrollController.dispose();
     super.dispose();
+  }
+
+  void _cancelEditingPromotion() {
+    setState(() {
+      _editingPostId = null;
+      _editingRemoteImageUrl = '';
+      _titleCtrl.clear();
+      _linkCtrl.clear();
+      _contentCtrl.clear();
+      _pickedImageBytes = null;
+      _pickedImageDataUrl = '';
+      _selectedPromotionMonths = _defaultPromotionMonths;
+    });
+  }
+
+  void _loadPostForEditing(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+    final m = doc.data();
+    final savedMonths = m['promotionDurationMonths'];
+    final durationMonths = savedMonths is int
+        ? savedMonths
+        : savedMonths is num
+            ? savedMonths.toInt()
+            : _defaultPromotionMonths;
+    setState(() {
+      _editingPostId = doc.id;
+      _titleCtrl.text = (m['authorName'] as String?)?.trim() ?? '';
+      _linkCtrl.text = (m['externalLink'] as String?)?.trim() ?? '';
+      _contentCtrl.text = (m['content'] as String?)?.trim() ?? '';
+      _selectedPromotionMonths =
+          durationMonths < 1 ? _defaultPromotionMonths : durationMonths;
+      _pickedImageBytes = null;
+      _pickedImageDataUrl = '';
+      _editingRemoteImageUrl = (m['imageUrl'] as String?)?.trim() ?? '';
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_promotionScrollController.hasClients) {
+        _promotionScrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 360),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   Future<void> _pickPromotionImage(LanguageProvider lang) async {
@@ -4770,6 +4842,7 @@ class _AdminSectionPromotionPostPageState
       setState(() {
         _pickedImageBytes = prepared.bytes;
         _pickedImageDataUrl = dataUrl;
+        _editingRemoteImageUrl = '';
       });
     } catch (e, st) {
       debugPrint('admin promotion pick image: $e\n$st');
@@ -4788,6 +4861,7 @@ class _AdminSectionPromotionPostPageState
     setState(() {
       _pickedImageBytes = null;
       _pickedImageDataUrl = '';
+      _editingRemoteImageUrl = '';
     });
   }
 
@@ -4804,7 +4878,10 @@ class _AdminSectionPromotionPostPageState
       );
       return;
     }
-    if (content.isEmpty && link.isEmpty && _pickedImageDataUrl.isEmpty) {
+    if (content.isEmpty &&
+        link.isEmpty &&
+        _pickedImageDataUrl.isEmpty &&
+        _editingRemoteImageUrl.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content:
@@ -4814,12 +4891,17 @@ class _AdminSectionPromotionPostPageState
     }
     setState(() => _publishing = true);
     try {
+      final existingId = _editingPostId?.trim() ?? '';
+      final imagePayload = _pickedImageDataUrl.trim().isNotEmpty
+          ? _pickedImageDataUrl.trim()
+          : _editingRemoteImageUrl.trim();
       final postId =
           await FeedFirestoreService.instance.publishAdminAdPromotion(
         displayName: title,
         content: content,
         externalLink: link,
-        imageUrl: _pickedImageDataUrl,
+        imageUrl: imagePayload,
+        existingPostId: existingId,
         durationMonths: _selectedPromotionMonths,
         promotionOrigin: FeedFirestoreService.adPromotionOriginAdminManual,
       );
@@ -4832,14 +4914,23 @@ class _AdminSectionPromotionPostPageState
         );
         return;
       }
+      final wasEditing = existingId.isNotEmpty;
       _titleCtrl.clear();
       _linkCtrl.clear();
       _contentCtrl.clear();
       _clearPickedImage();
-      setState(() => _selectedPromotionMonths = _defaultPromotionMonths);
+      setState(() {
+        _selectedPromotionMonths = _defaultPromotionMonths;
+        _editingPostId = null;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(lang.getString('admin_ad_promotion_publish_ok'))),
+          content: Text(
+            wasEditing
+                ? lang.getString('admin_ad_promotion_updated_ok')
+                : lang.getString('admin_ad_promotion_publish_ok'),
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -4898,7 +4989,10 @@ class _AdminSectionPromotionPostPageState
   }
 
   Widget _buildImageBox(LanguageProvider lang) {
-    final hasImage = _pickedImageBytes != null && _pickedImageBytes!.isNotEmpty;
+    final hasLocal =
+        _pickedImageBytes != null && _pickedImageBytes!.isNotEmpty;
+    final hasRemote = _editingRemoteImageUrl.trim().isNotEmpty;
+    final showPreview = hasLocal || hasRemote;
     return Stack(
       children: [
         Material(
@@ -4916,20 +5010,28 @@ class _AdminSectionPromotionPostPageState
                 border: Border.all(color: Colors.black87, width: 2),
               ),
               clipBehavior: Clip.antiAlias,
-              child: hasImage
+              child: hasLocal
                   ? Image.memory(
                       _pickedImageBytes!,
                       fit: BoxFit.cover,
                     )
-                  : Center(
-                      child: Text(
-                        lang.getString('admin_ad_promotion_upload'),
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w600,
+                  : hasRemote
+                      ? StorageNetworkImage(
+                          url: _editingRemoteImageUrl,
+                          width: double.infinity,
+                          height: 220,
+                          fit: BoxFit.cover,
+                          borderRadius: 0,
+                        )
+                      : Center(
+                          child: Text(
+                            lang.getString('admin_ad_promotion_upload'),
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
             ),
           ),
         ),
@@ -4949,7 +5051,7 @@ class _AdminSectionPromotionPostPageState
               ),
             ),
           ),
-        if (hasImage)
+        if (showPreview)
           Positioned(
             top: 10,
             right: 10,
@@ -5078,6 +5180,14 @@ class _AdminSectionPromotionPostPageState
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
+                    onPressed: () => _loadPostForEditing(doc),
+                    icon: const Icon(Icons.edit_outlined),
+                    label: Text(lang.getString('admin_ad_promotion_edit')),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
                     onPressed: isActive
                         ? () async {
                             try {
@@ -5123,9 +5233,43 @@ class _AdminSectionPromotionPostPageState
   @override
   Widget build(BuildContext context) {
     final lang = Provider.of<LanguageProvider>(context);
+    final editing = _editingPostId != null && _editingPostId!.isNotEmpty;
     final formFields = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (editing) ...[
+          Material(
+            color: Colors.amber.shade50,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.edit_note, color: Colors.amber.shade900, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      lang.getString('admin_ad_promotion_editing_banner'),
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.35,
+                        color: Colors.brown.shade800,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _cancelEditingPromotion,
+                    child: Text(
+                      lang.getString('admin_ad_promotion_cancel_edit'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         TextField(
           controller: _titleCtrl,
           decoration: InputDecoration(
@@ -5188,7 +5332,11 @@ class _AdminSectionPromotionPostPageState
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Text(lang.getString('admin_ad_promotion_publish')),
+                : Text(
+                    editing
+                        ? lang.getString('admin_ad_promotion_save_publish')
+                        : lang.getString('admin_ad_promotion_publish'),
+                  ),
           ),
         ),
       ],
@@ -5217,6 +5365,7 @@ class _AdminSectionPromotionPostPageState
               const [];
 
           return SingleChildScrollView(
+            controller: _promotionScrollController,
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

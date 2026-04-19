@@ -21,7 +21,11 @@ Future<bool> ensureMessagingThreadAllowed(
   required String peerUserId,
 }) async {
   if (!FirebaseBootstrap.isReady) return true;
-  if (peerUserId.isEmpty || peerUserId.length < 20) return true;
+  if (peerUserId.isEmpty ||
+      peerUserId.startsWith('demo_') ||
+      peerUserId.length < 15) {
+    return true;
+  }
   if (myUid.isEmpty) return true;
   final okConv =
       await ChatFirestoreService.instance.canOpenMessagingConversation(
@@ -54,7 +58,11 @@ Future<bool> ensureCanOpenCloudChatWithPeer(
   required String peerUserId,
 }) async {
   if (!FirebaseBootstrap.isReady) return true;
-  if (peerUserId.isEmpty || peerUserId.length < 20) return true;
+  if (peerUserId.isEmpty ||
+      peerUserId.startsWith('demo_') ||
+      peerUserId.length < 15) {
+    return true;
+  }
   if (myUid.isEmpty) return true;
   try {
     await ChatQuotaService.instance.ensureCanSendMessageToPeer(

@@ -20,6 +20,7 @@ import '../providers/auth_provider.dart';
 import '../services/firebase_bootstrap.dart';
 import '../services/user_firestore_service.dart';
 import '../services/chat_firestore_service.dart';
+import '../services/chat_quota_service.dart';
 import '../services/discover_filter_cookies.dart';
 import 'chat_detail_page.dart';
 import 'settings_page.dart';
@@ -628,6 +629,9 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       );
+    } on ChatQuotaExceededException {
+      if (!mounted) return;
+      await showChatQuotaPaywallDialog(context);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

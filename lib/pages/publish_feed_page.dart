@@ -13,6 +13,7 @@ import '../providers/language_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/nav_provider.dart';
 import '../services/chat_firestore_service.dart';
+import '../services/chat_quota_service.dart';
 import '../services/feed_firestore_service.dart';
 import '../services/firebase_bootstrap.dart';
 import '../services/user_firestore_service.dart';
@@ -171,6 +172,9 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
           ),
         ),
       );
+    } on ChatQuotaExceededException {
+      if (!mounted) return;
+      await showChatQuotaPaywallDialog(context);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -652,9 +656,12 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(ok ? '已發送邀約給 $peerName' : '無法發送（可能已有對話或名額已滿）'),
+          content: Text(ok ? '已發送邀約給 $peerName' : '無法發送（可能已有對話）'),
         ),
       );
+    } on ChatQuotaExceededException {
+      if (!mounted) return;
+      await showChatQuotaPaywallDialog(context);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

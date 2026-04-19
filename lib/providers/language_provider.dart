@@ -395,6 +395,11 @@ class LanguageProvider with ChangeNotifier {
     'admin_ad_promotion_published': '宣傳貼文記錄',
     'admin_ad_promotion_empty': '尚未有宣傳貼文記錄。',
     'admin_ad_promotion_pause': '暫停',
+    'admin_ad_promotion_edit': '編輯',
+    'admin_ad_promotion_cancel_edit': '取消編輯',
+    'admin_ad_promotion_editing_banner': '正在編輯一則貼文；修改後按下方按鈕即可更新並重新發佈。',
+    'admin_ad_promotion_save_publish': '儲存並發佈',
+    'admin_ad_promotion_updated_ok': '已更新並發佈宣傳貼文。',
     'admin_ad_promotion_republish': '重新發佈',
     'admin_ad_promotion_publish_ok': '已發佈宣傳貼文。',
     'admin_ad_promotion_publish_failed': '發佈失敗，請稍後再試。',
@@ -672,9 +677,9 @@ class LanguageProvider with ChangeNotifier {
         '匿名登入無法上傳圖片至雲端儲存。請改用 Email／Google／Apple 登入後再試。',
     'no_event_proposals': '暫無提議活動方案記錄',
     'chat_quota_free_hint':
-        '每日最多可免費向 2 位「不同會員」各傳訊（不限訊息則數）；與同一人同日繼續聊不另計。管理員確認已付款後，訂閱生效者可無限次與不同會員聊天。',
+        '未訂閱會員：每個曆日在訊息功能內，最多與 2 位「不同會員」聊天（依帳號辨識，新舊會員或暱稱不影響）；與同一人同日不另計名額。管理員確認已收款後，訂閱生效可無限聊。',
     'chat_quota_paywall':
-        '今日已向 2 位不同會員用畢免費額度。請訂閱並於管理員確認收款後，方可無限次與其他會員聊天。（未完成付款之訂單不生效。）',
+        '每日免費只可與兩位會員聊天，請成功訂閱方案後，不限次數與其他會員進行聊天。',
     'chat_quota_dialog_title': '免費聊天名額已滿',
     'chat_quota_go_subscribe': '請訂閱方案',
     'messaging_requires_invite_accept': '請先邀請對方，待對方於「邀聊通知」接受後才可進入訊息聊天。',
@@ -971,6 +976,11 @@ class LanguageProvider with ChangeNotifier {
     'admin_ad_promotion_published': '宣传贴文记录',
     'admin_ad_promotion_empty': '尚未有宣传贴文记录。',
     'admin_ad_promotion_pause': '暂停',
+    'admin_ad_promotion_edit': '编辑',
+    'admin_ad_promotion_cancel_edit': '取消编辑',
+    'admin_ad_promotion_editing_banner': '正在编辑一条贴文；修改后点击下方按钮即可更新并重新发布。',
+    'admin_ad_promotion_save_publish': '保存并发布',
+    'admin_ad_promotion_updated_ok': '已更新并发布宣传贴文。',
     'admin_ad_promotion_republish': '重新发布',
     'admin_ad_promotion_publish_ok': '已发布宣传贴文。',
     'admin_ad_promotion_publish_failed': '发布失败，请稍后再试。',
@@ -1248,7 +1258,7 @@ class LanguageProvider with ChangeNotifier {
     'chat_quota_free_hint':
         '每日最多可免费向 2 位「不同会员」各发消息（不限条数）；与同人同日继续聊不另计。管理员确认已付款后，订阅生效者可无限次与不同会员聊天。',
     'chat_quota_paywall':
-        '今日已向 2 位不同会员用完免费额度。请订阅并在管理员确认收款后，方可无限次与其他会员聊天。（未完成付款的订单不生效。）',
+        '每日免费只能与两位会员聊天，请成功订阅方案后，不限次数与其他会员进行聊天。',
     'chat_quota_dialog_title': '免费聊天名额已满',
     'chat_quota_go_subscribe': '请订阅方案',
     'messaging_requires_invite_accept': '请先邀请对方，待对方于「邀聊通知」接受后才可进入消息聊天。',
@@ -1575,6 +1585,12 @@ class LanguageProvider with ChangeNotifier {
     'admin_ad_promotion_published': 'Promotion post records',
     'admin_ad_promotion_empty': 'No promotion post records yet.',
     'admin_ad_promotion_pause': 'Pause',
+    'admin_ad_promotion_edit': 'Edit',
+    'admin_ad_promotion_cancel_edit': 'Cancel editing',
+    'admin_ad_promotion_editing_banner':
+        'Editing a post; tap the button below to save and publish changes.',
+    'admin_ad_promotion_save_publish': 'Save & publish',
+    'admin_ad_promotion_updated_ok': 'Promotion post updated and published.',
     'admin_ad_promotion_republish': 'Republish',
     'admin_ad_promotion_publish_ok': 'Promotion post published.',
     'admin_ad_promotion_publish_failed':
@@ -1898,7 +1914,7 @@ class LanguageProvider with ChangeNotifier {
     'chat_quota_free_hint':
         'Each day you can message up to 2 different members for free (unlimited messages with each). Same person the same day counts once. After an admin confirms payment, an active subscription lets you message unlimited members.',
     'chat_quota_paywall':
-        'You have used today’s allowance of 2 different members. Subscribe and wait for admin payment confirmation for unlimited messaging. Unpaid orders do not unlock this.',
+        'Free chat is limited to two members per day. After you successfully subscribe to a plan, you can chat with other members without limit.',
     'chat_quota_dialog_title': 'Free chat limit reached',
     'chat_quota_go_subscribe': 'Subscribe',
     'messaging_requires_invite_accept':

@@ -53,6 +53,10 @@ class ChatFirestoreService {
       'lastMessage': '',
       'lastMessageAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
+      'unreadCountByUid': {
+        userIdA: 0,
+        userIdB: 0,
+      },
     }, SetOptions(merge: true));
     return cid;
   }
@@ -137,6 +141,7 @@ class ChatFirestoreService {
   }
 
   /// A 向 B 發出聊天邀請（[FirestorePaths.chatInvitations]）。若已互配則回傳 false。
+  /// 未訂閱且今日免費名額已滿時，[ChatQuotaService.ensureInviterCanInvite] 會拋 [ChatQuotaExceededException]。
   Future<bool> sendChatInvitation({
     required String fromUid,
     required String toUid,
@@ -144,6 +149,10 @@ class ChatFirestoreService {
   }) async {
     if (!FirebaseBootstrap.isReady) return false;
     if (fromUid == toUid) return false;
+    await ChatQuotaService.instance.ensureInviterCanInvite(
+      inviterUid: fromUid,
+      inviteeUid: toUid,
+    );
     final cid = pairConversationId(fromUid, toUid);
     if (await conversationExists(cid)) {
       return false;
@@ -159,31 +168,109 @@ class ChatFirestoreService {
     return true;
   }
 
-  /// B 接受 A 的邀請 → 互配並建立對話。
+  /// B 接受 A 的邀請 → 互配、建立對話，並在同一交易內為雙方計入當日免費「不同對象」名額（未訂閱者）。
+  /// 若任一方已滿兩位名額，拋 [ChatQuotaExceededException]；邀請不存在或非 pending 則回傳 null。
   Future<LikePeerResult?> acceptChatInvitation({
     required String accepterUid,
     required String inviterUid,
   }) async {
     if (!FirebaseBootstrap.isReady) return null;
     final docId = _likeDocId(inviterUid, accepterUid);
-    final ref = _db.collection(FirestorePaths.chatInvitations).doc(docId);
-    final snap = await ref.get();
-    if (!snap.exists) return null;
-    final data = snap.data()!;
-    if (data['toUid'] != accepterUid || data['status'] != 'pending') {
+    final inviteRef =
+        _db.collection(FirestorePaths.chatInvitations).doc(docId);
+
+    try {
+      await ChatQuotaService.instance
+          .reconcileFreeChatPeersFromInvitationConversations(inviterUid);
+      await ChatQuotaService.instance
+          .reconcileFreeChatPeersFromInvitationConversations(accepterUid);
+      final cid = await _db.runTransaction<String>((tx) async {
+        final snap = await tx.get(inviteRef);
+        if (!snap.exists) {
+          throw StateError('invite_missing');
+        }
+        final data = snap.data()!;
+        if (data['toUid'] != accepterUid || data['status'] != 'pending') {
+          throw StateError('invite_not_pending');
+        }
+
+        final inviterRef = _db.collection(FirestorePaths.users).doc(inviterUid);
+        final accepterRef =
+            _db.collection(FirestorePaths.users).doc(accepterUid);
+        final inviterSnap = await tx.get(inviterRef);
+        final accepterSnap = await tx.get(accepterRef);
+
+        final patchInviter =
+            ChatQuotaService.instance.mergePatchForOutboundChatPeer(
+          userData: inviterSnap.data(),
+          peerUid: accepterUid,
+        );
+        final patchAccepter =
+            ChatQuotaService.instance.mergePatchForOutboundChatPeer(
+          userData: accepterSnap.data(),
+          peerUid: inviterUid,
+        );
+
+        final pairIds = [inviterUid, accepterUid]..sort();
+        final cidInner = pairConversationId(inviterUid, accepterUid);
+
+        tx.update(inviteRef, {
+          'status': 'accepted',
+          'respondedAt': FieldValue.serverTimestamp(),
+        });
+
+        final matchRef =
+            _db.collection(FirestorePaths.matches).doc(cidInner);
+        tx.set(
+          matchRef,
+          {
+            'userIds': [inviterUid, accepterUid],
+            'source': 'chat_invitation',
+            'createdAt': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true),
+        );
+
+        final convRef =
+            _db.collection(FirestorePaths.conversations).doc(cidInner);
+        tx.set(
+          convRef,
+          {
+            'participantIds': pairIds,
+            'pairSource': pairSourceChatInvitation,
+            'lastMessage': '',
+            'lastMessageAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+            'unreadCountByUid': {
+              inviterUid: 0,
+              accepterUid: 0,
+            },
+          },
+          SetOptions(merge: true),
+        );
+
+        if (patchInviter != null) {
+          tx.set(inviterRef, patchInviter, SetOptions(merge: true));
+        }
+        if (patchAccepter != null) {
+          tx.set(accepterRef, patchAccepter, SetOptions(merge: true));
+        }
+
+        return cidInner;
+      });
+      return LikePeerResult.mutual(conversationId: cid);
+    } on ChatQuotaExceededException {
+      rethrow;
+    } on StateError catch (e) {
+      if (e.message == 'invite_missing' ||
+          e.message == 'invite_not_pending') {
+        return null;
+      }
+      rethrow;
+    } catch (e, st) {
+      debugPrint('acceptChatInvitation $e\n$st');
       return null;
     }
-    await ref.update({
-      'status': 'accepted',
-      'respondedAt': FieldValue.serverTimestamp(),
-    });
-    final cid = await finalizeMutualPair(
-      userIdA: inviterUid,
-      userIdB: accepterUid,
-      source: 'chat_invitation',
-      createMessagingConversation: true,
-    );
-    return LikePeerResult.mutual(conversationId: cid);
   }
 
   /// B 拒絕邀請（刪除 pending 文件）。
@@ -277,6 +364,16 @@ class ChatFirestoreService {
         final listMs = t?.millisecondsSinceEpoch ?? 0;
         final lastSender =
             (data['lastMessageSenderId'] as String?)?.trim() ?? '';
+        final unreadRaw = data['unreadCountByUid'];
+        var unread = 0;
+        if (unreadRaw is Map) {
+          final v = unreadRaw[myUid];
+          if (v is int) {
+            unread = v;
+          } else if (v is num) {
+            unread = v.toInt();
+          }
+        }
         rows.add({
           'conversationId': doc.id,
           'userId': peerId,
@@ -286,7 +383,7 @@ class ChatFirestoreService {
           'avatar': (peer?['avatar'] as String?)?.trim() ?? '',
           'lastMessage': (data['lastMessage'] as String?) ?? '',
           'time': _formatListTime(t),
-          'unread': 0,
+          'unread': unread,
           'lastMessageSenderId': lastSender,
           'lastMessageAtMs': listMs,
           /// 供訊息頁與本機最後一則合併排序（對話本文僅存本機時仍可依此對照）。
@@ -332,6 +429,8 @@ class ChatFirestoreService {
     required Map<String, dynamic> messagePayload,
     required Map<String, dynamic> convMerge,
   }) async {
+    await ChatQuotaService.instance
+        .reconcileFreeChatPeersFromInvitationConversations(senderId);
     final userRef =
         _db.collection(FirestorePaths.users).doc(senderId);
     await _db.runTransaction((tx) async {
@@ -358,6 +457,9 @@ class ChatFirestoreService {
       );
       tx.set(msgRef, messagePayload);
       tx.set(convRef, convMerge, SetOptions(merge: true));
+      tx.update(convRef, {
+        'unreadCountByUid.$peerUid': FieldValue.increment(1),
+      });
       if (patch != null) {
         tx.set(userRef, patch, SetOptions(merge: true));
       }
@@ -523,19 +625,22 @@ class ChatFirestoreService {
     );
   }
 
-  /// 開啟對話時由 **接收方** 呼叫：將對方發出（`senderId == peerUid`）的訊息標上 [readAt]，
-  /// 發送方即可在自己氣泡右下角顯示雙剔（對方已讀）。
+  /// 進入一對一對話頁時由 **目前使用者** 呼叫：將 [unreadCountByUid] 中自己的未讀歸零，
+  /// 並將對方發出（`senderId == peerUid`）的訊息標上 [readAt]（發送方雙剔）。
   Future<void> markPeerOutgoingMessagesAsReadByViewer({
     required String conversationId,
     required String peerUid,
+    required String viewerUid,
   }) async {
     if (!FirebaseBootstrap.isReady) return;
-    if (peerUid.isEmpty) return;
+    if (peerUid.isEmpty || viewerUid.isEmpty) return;
 
-    final col = _db
-        .collection(FirestorePaths.conversations)
-        .doc(conversationId)
-        .collection('messages');
+    final convRef = _db.collection(FirestorePaths.conversations).doc(conversationId);
+    await convRef.update({
+      'unreadCountByUid.$viewerUid': 0,
+    });
+
+    final col = convRef.collection('messages');
 
     // 單一 where 不需複合索引；限制筆數避免一次讀取過大。
     final snap =

@@ -7,11 +7,11 @@ import '../providers/auth_provider.dart';
 import '../providers/language_provider.dart';
 import '../providers/nav_provider.dart';
 import '../providers/notification_provider.dart';
-import '../pages/chat_detail_page.dart';
 import '../services/chat_firestore_service.dart';
+import '../services/chat_quota_service.dart';
 import '../services/firebase_bootstrap.dart';
 import '../services/in_app_notification_sound.dart';
-import '../widgets/chat_quota_gate.dart';
+import 'chat_quota_gate.dart';
 
 /// 全域監聽待處理邀聊；有新內容時即時彈窗提醒會員查看。
 class ChatInvitePopupHost extends StatefulWidget {
@@ -120,31 +120,19 @@ class _ChatInvitePopupHostState extends State<ChatInvitePopupHost> {
               const SnackBar(content: Text('無法接受邀請（可能已過期）')),
             );
           } else {
+            // 只切到訊息分頁；勿自動開啟一對一聊天頁。ChatDetailPage 會在載入對話時
+            // 標記對方訊息為已讀；接受邀請本身不得觸發已讀（會員須自行按入該對話）。
             context.read<NavProvider>().setCurrentIndex(1);
-            if (await ensureMessagingThreadAllowed(
-              context,
-              myUid: myUid,
-              peerUserId: inviterUid,
-            )) {
-              if (!mounted) return;
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ChatDetailPage(
-                    userId: inviterUid,
-                    name: name,
-                    avatar: avatar,
-                    conversationId: result.conversationId,
-                  ),
-                ),
-              );
-            }
           }
         } else {
           await ChatFirestoreService.instance.declineChatInvitation(
             accepterUid: myUid,
             inviterUid: inviterUid,
           );
+        }
+      } on ChatQuotaExceededException {
+        if (mounted) {
+          await showChatQuotaPaywallDialog(context);
         }
       } catch (e) {
         if (mounted) {
