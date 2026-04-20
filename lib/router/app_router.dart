@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -113,12 +114,16 @@ String? _globalRedirect(BuildContext context, GoRouterState state) {
   if (path == '/one-sentence') {
     return '/talking';
   }
+  /// Web：不經啟動頁，根路徑直接進登入（與 [initialLocation] 一致）。
+  if (kIsWeb && path == '/') {
+    return '/login';
+  }
   return null;
 }
 
 final GoRouter appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
-  initialLocation: '/',
+  initialLocation: kIsWeb ? '/login' : '/',
   debugLogDiagnostics: false,
   redirect: _globalRedirect,
   observers: [

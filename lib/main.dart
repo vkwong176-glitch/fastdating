@@ -34,7 +34,8 @@ import 'services/app_local_cache_trim.dart';
 import 'utils/constants.dart';
 
 /// Fast Dating 入口
-/// - **Web／iOS／Android**：首屏皆為 [SplashPage]；Web 約 2 秒內前往登入頁，已登入者進 `/main`。
+/// - **Web**：首屏直接 [LoginPage]（不顯示 [SplashPage]），根路徑 "/" 亦會導向 `/login`。
+/// - **iOS／Android**：首屏為 [SplashPage]，已登入者進 `/main`。
 /// 已登入者於 [LoginPage] 亦會導向 `/main`。
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

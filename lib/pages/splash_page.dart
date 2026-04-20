@@ -11,7 +11,7 @@ import '../utils/responsive_layout.dart';
 import '../widgets/pressable_opacity.dart';
 
 /// 啟動頁：漸層背景、中央品牌圖、登入／註冊。
-/// Web：首屏為本頁，約 2 秒內自動前往 [LoginPage]（已登入者改導向 `/main`）。
+/// **僅 iOS／Android** 使用；Web 由路由直接進 [LoginPage]，不經本頁。
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
