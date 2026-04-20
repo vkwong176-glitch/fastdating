@@ -54,42 +54,8 @@
   <link rel="shortcut icon" type="image/png" href="favicon.png"/>
 
   <link rel="manifest" href="manifest.json">
-
-  <!-- Flutter 載入前靜態啟動畫面（與 App 漸層色調一致）；首幀後移除 -->
-  <style>
-    #fd-html-splash {
-      position: fixed;
-      inset: 0;
-      z-index: 999999;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-      background: linear-gradient(90deg, #FFB347 0%, #FF7F50 50%, #FFCCCC 100%);
-      color: #fff;
-      text-align: center;
-      -webkit-font-smoothing: antialiased;
-    }
-    #fd-html-splash .fd-splash-title {
-      font-size: clamp(1.25rem, 4vw, 1.75rem);
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-shadow: 0 1px 4px rgba(0,0,0,0.2);
-    }
-    #fd-html-splash .fd-splash-sub {
-      margin-top: 0.75rem;
-      font-size: 0.9rem;
-      opacity: 0.95;
-    }
-  </style>
 </head>
 <body>
-  <div id="fd-html-splash" aria-hidden="true">
-    <div class="fd-splash-title">Fast Dating</div>
-    <div class="fd-splash-sub">載入中…</div>
-  </div>
   <!-- 解除舊版 Service Worker，否則瀏覽器可能持續執行舊 main.dart.js（版面與管理員登入不會更新） -->
   <script>
     if ('serviceWorker' in navigator) {
@@ -97,14 +63,6 @@
         for (var i = 0; i < regs.length; i++) regs[i].unregister();
       });
     }
-    (function () {
-      function hideHtmlSplash() {
-        var el = document.getElementById('fd-html-splash');
-        if (el && el.parentNode) el.parentNode.removeChild(el);
-      }
-      window.addEventListener('flutter-first-frame', hideHtmlSplash);
-      setTimeout(hideHtmlSplash, 20000);
-    })();
   </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
