@@ -466,7 +466,7 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
               builder: (context, snap) {
                 final ps = snap.data ?? PaymentSettingsSnapshot.defaults;
                 final tiles = <Widget>[];
-                if (ps.enableIap) {
+                if (ps.enableIap && !kIsWeb) {
                   tiles.add(
                     ListTile(
                       leading: const Icon(Icons.smartphone),

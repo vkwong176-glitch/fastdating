@@ -790,16 +790,12 @@ class _AdPartnerPageState extends State<AdPartnerPage> {
           builder: (context, snap) {
             final ps = snap.data ?? PaymentSettingsSnapshot.defaults;
             final tiles = <Widget>[];
-            if (ps.enableIap) {
+            if (ps.enableIap && !kIsWeb) {
               tiles.add(
                 ListTile(
                   leading: const Icon(Icons.smartphone),
                   title: const Text('App Store／Google Play'),
-                  subtitle: const Text(
-                    kIsWeb
-                        ? '請使用 iOS／Android App 完成應用程式內購買'
-                        : '依裝置使用 App Store 或 Google Play 付款',
-                  ),
+                  subtitle: const Text('依裝置使用 App Store 或 Google Play 付款'),
                   onTap: () {
                     Navigator.pop(ctx);
                     _handleAdIapPurchase(lang);

@@ -272,16 +272,13 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
           builder: (context, snap) {
             final ps = snap.data ?? PaymentSettingsSnapshot.defaults;
             final tiles = <Widget>[];
-            if (ps.enableIap) {
+            // Web 不顯示 IAP；上架 iOS／Android App 後於原生環境顯示。
+            if (ps.enableIap && !kIsWeb) {
               tiles.add(
                 ListTile(
                   leading: const Icon(Icons.smartphone),
                   title: const Text('App Store／Google Play'),
-                  subtitle: Text(
-                    kIsWeb
-                        ? '請使用 iOS／Android App 完成應用程式內購買'
-                        : '依裝置使用 App Store 或 Google Play 付款',
-                  ),
+                  subtitle: const Text('依裝置使用 App Store 或 Google Play 付款'),
                   onTap: () {
                     Navigator.pop(ctx);
                     _handleContinuePurchase(planName, plans);
