@@ -94,12 +94,12 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
@@ -132,60 +132,8 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
                                   color: Colors.brown),
                             ),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (title.isNotEmpty &&
-                          !isAdPromotionPlaceholderName(title)) ...[
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                      ],
-                      Text(
-                        promotion.content,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.black,
-                          height: 1.35,
-                        ),
-                      ),
-                      if (link.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          link,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue.shade700,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                if (link.isNotEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 8),
-                    child: Icon(Icons.open_in_new, color: Colors.black54),
-                  ),
-              ],
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Container(
+                const SizedBox(height: 2),
+                Container(
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
@@ -203,8 +151,55 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
                     ),
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (title.isNotEmpty &&
+                      !isAdPromotionPlaceholderName(title)) ...[
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                  ],
+                  Text(
+                    promotion.content,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.black,
+                      height: 1.35,
+                    ),
+                  ),
+                  if (link.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      link,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue.shade700,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
+            if (link.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.only(left: 8),
+                child: Icon(Icons.open_in_new, color: Colors.black54),
+              ),
           ],
         ),
       ),
