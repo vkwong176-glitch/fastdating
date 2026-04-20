@@ -29,18 +29,6 @@
   <link rel="canonical" href="https://fastdating1.com/">
   <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml">
 
-  <!-- LCP／CanvasKit：預先連線 gstatic，縮短首屏資源延遲 -->
-  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-  <link rel="dns-prefetch" href="https://www.gstatic.com">
-
-  <!-- 首屏圖示：避免等主 JS 才開始下載（Speed Index／視覺完成度） -->
-  <link rel="preload" href="icons/fd-icon-192.png" as="image">
-
-  <!-- 盡早開始下載 Flutter 入口腳本（與下方 defer 搭配） -->
-  <link rel="preload" href="flutter_bootstrap.js" as="script">
-  <link rel="preload" href="flutter.js" as="script">
-  <link rel="preload" href="main.dart.js" as="script">
-
   <!-- Open Graph（分享連結／部分搜尋結果參考） -->
   <meta property="og:site_name" content="Fast Dating">
   <meta property="og:title" content="Fast Dating｜Speed Dating 單身配對・多元交友平台">
@@ -66,68 +54,8 @@
   <link rel="shortcut icon" type="image/png" href="favicon.png"/>
 
   <link rel="manifest" href="manifest.json">
-
-  <!--
-    首屏：淺底 + 純 HTML 文字立即顯示（不需等圖／Canvas），改善 PageSpeed Speed Index；
-    全黑畫面會讓 SI 長時間停留在「幾乎無可見內容」。
-  -->
-  <style>
-    #fd-splash {
-      position: fixed;
-      inset: 0;
-      z-index: 999999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #f5f5f5;
-    }
-    #fd-splash.fd-hidden {
-      display: none;
-    }
-    #fd-splash .fd-splash-inner {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      padding: 24px;
-      max-width: 100%;
-    }
-    #fd-splash .fd-splash-title {
-      margin: 0;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
-      font-size: clamp(1.1rem, 4vw, 1.35rem);
-      font-weight: 700;
-      color: #212121;
-      letter-spacing: 0.02em;
-    }
-    #fd-splash .fd-splash-sub {
-      margin: 0;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
-      font-size: 0.9rem;
-      color: #616161;
-    }
-    #fd-splash .fd-splash-img {
-      width: min(72vw, 280px);
-      height: auto;
-      max-width: 280px;
-    }
-  </style>
 </head>
 <body>
-  <div id="fd-splash" role="status" aria-live="polite" aria-label="載入中">
-    <div class="fd-splash-inner">
-      <img class="fd-splash-img" src="icons/fd-icon-192.png" width="280" height="280" alt="" fetchpriority="high" decoding="async">
-      <p class="fd-splash-title">Fast Dating</p>
-      <p class="fd-splash-sub">載入中…</p>
-    </div>
-  </div>
-  <script>
-    window.addEventListener('flutter-first-frame', function () {
-      var el = document.getElementById('fd-splash');
-      if (el) el.classList.add('fd-hidden');
-    });
-  </script>
   <!-- 解除舊版 Service Worker，否則瀏覽器可能持續執行舊 main.dart.js（版面與管理員登入不會更新） -->
   <script>
     if ('serviceWorker' in navigator) {
@@ -144,6 +72,6 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <script src="flutter_bootstrap.js" defer></script>
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import 'navigation/navigation_bridge.dart';
@@ -35,31 +34,19 @@ import 'services/app_local_cache_trim.dart';
 import 'utils/constants.dart';
 
 /// Fast Dating 入口
-/// - **Web**：先 [runApp] 再非阻塞初始化 Firebase，縮短首幀／白屏；首屏路由為 `/login`。
-/// - **iOS／Android**：Firebase 於 [runApp] 前初始化；首屏為 [SplashPage]。
+/// - **Web**：首屏直接登入頁（無 Flutter 啟動頁）。
+/// - **iOS／Android**：首屏為 [SplashPage]（上架體驗與品牌曝光），已登入者進 `/main`。
 /// 已登入者於 [LoginPage] 亦會導向 `/main`。
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   url_strategy.configureWebUrlStrategy();
   AppLocalCacheTrim.onAppStart();
+  await FirebaseBootstrap.init();
+  if (FirebaseBootstrap.isReady) {
+    await PushNotificationService.instance.init();
+  }
   navigateToLocation = (loc) => appRouter.go(loc);
-  if (kIsWeb) {
-    runApp(const FastDatingApp());
-    unawaited(_bootstrapWebAfterRunApp());
-    return;
-  }
-  await FirebaseBootstrap.init();
-  if (FirebaseBootstrap.isReady) {
-    await PushNotificationService.instance.init();
-  }
   runApp(const FastDatingApp());
-}
-
-Future<void> _bootstrapWebAfterRunApp() async {
-  await FirebaseBootstrap.init();
-  if (FirebaseBootstrap.isReady) {
-    await PushNotificationService.instance.init();
-  }
 }
 
 class FastDatingApp extends StatelessWidget {

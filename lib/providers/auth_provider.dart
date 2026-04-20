@@ -27,34 +27,24 @@ Future<void> _ensureGoogleSignInReady() async {
 class AuthProvider with ChangeNotifier {
   AuthProvider() {
     if (FirebaseBootstrap.isReady) {
-      _wireFirebaseAuthListeners();
-    } else {
-      FirebaseBootstrap.whenReady(_wireFirebaseAuthListeners);
-    }
-  }
-
-  bool _firebaseAuthListenersAttached = false;
-
-  void _wireFirebaseAuthListeners() {
-    if (_firebaseAuthListenersAttached || !FirebaseBootstrap.isReady) return;
-    _firebaseAuthListenersAttached = true;
-    _user = FirebaseAuth.instance.currentUser;
-    _applyUser(_user);
-    FirebaseAuth.instance.authStateChanges().listen((user) {
-      _user = user;
-      _applyUser(user);
-    });
-    // Web：Google redirect 回站後，currentUser 有時略晚於首幀，導致 isLogin 仍為 false
-    if (kIsWeb) {
-      scheduleMicrotask(_syncFirebaseUserIfNeeded);
-      Future<void>.delayed(
-        const Duration(milliseconds: 120),
-        _syncFirebaseUserIfNeeded,
-      );
-      Future<void>.delayed(
-        const Duration(milliseconds: 600),
-        _syncFirebaseUserIfNeeded,
-      );
+      _user = FirebaseAuth.instance.currentUser;
+      _applyUser(_user);
+      FirebaseAuth.instance.authStateChanges().listen((user) {
+        _user = user;
+        _applyUser(user);
+      });
+      // Web：Google redirect 回站後，currentUser 有時略晚於首幀，導致 isLogin 仍為 false
+      if (kIsWeb) {
+        scheduleMicrotask(_syncFirebaseUserIfNeeded);
+        Future<void>.delayed(
+          const Duration(milliseconds: 120),
+          _syncFirebaseUserIfNeeded,
+        );
+        Future<void>.delayed(
+          const Duration(milliseconds: 600),
+          _syncFirebaseUserIfNeeded,
+        );
+      }
     }
   }
 
