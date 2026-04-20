@@ -101,6 +101,9 @@ class SubscriptionProvider with ChangeNotifier {
   SubscriptionRecord? _tierHint;
   final List<SubscriptionRecord> _localDemoRecords = [];
 
+  /// 與 [ChatQuotaService] 一致：`users.subscriptionActive == true` 時免費聊天名額不適用。
+  bool _subscriptionActive = false;
+
   StreamSubscription<List<QueryDocumentSnapshot<Map<String, dynamic>>>>?
       _ordersSub;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSub;
@@ -119,6 +122,7 @@ class SubscriptionProvider with ChangeNotifier {
 
     if (user == null || user.isAnonymous) {
       _localDemoRecords.clear();
+      _subscriptionActive = false;
       notifyListeners();
       return;
     }
@@ -147,6 +151,7 @@ class SubscriptionProvider with ChangeNotifier {
         .listen((snap) {
       final data = snap.data();
       final active = data?['subscriptionActive'] == true;
+      _subscriptionActive = active;
       final plan = _parseFastDatingPlan(data?['fastDatingPlan']);
       if (_hasSubscriptionPlanOrders) {
         _tierHint = null;
@@ -265,6 +270,9 @@ class SubscriptionProvider with ChangeNotifier {
   }
 
   bool get hasSubscription => subscriptionPlanRecords.isNotEmpty;
+
+  /// 已於 Firestore 標記為訂閱生效（與聊天配額「無限」規則一致）。
+  bool get isSubscriptionActiveUnlimited => _subscriptionActive;
 
   SubscriptionRecord? get latestRecord {
     final r = subscriptionPlanRecords;

@@ -123,6 +123,9 @@ class LanguageProvider with ChangeNotifier {
     'register': '註冊',
     'home': '首頁',
     'message': '訊息',
+    'message_list_guest_hint': '請先登入以查看訊息',
+    'message_page_free_chat_quota_tip':
+        '未訂閱會員：每人每日可與兩位（不同名）會員免費聊天。',
     'profile': '個人',
     'settings': '設定',
     'nearby': '附近的人',
@@ -708,6 +711,9 @@ class LanguageProvider with ChangeNotifier {
     'register': '注册',
     'home': '首页',
     'message': '消息',
+    'message_list_guest_hint': '请先登录以查看消息',
+    'message_page_free_chat_quota_tip':
+        '未订阅会员：每人每日可与两位（不同名）会员免费聊天。',
     'profile': '个人',
     'settings': '设置',
     'nearby': '附近的人',
@@ -1290,6 +1296,9 @@ class LanguageProvider with ChangeNotifier {
     'register': 'Register',
     'home': 'Home',
     'message': 'Message',
+    'message_list_guest_hint': 'Sign in to view messages',
+    'message_page_free_chat_quota_tip':
+        'Non-subscribers: chat for free with up to two different members per calendar day.',
     'profile': 'Profile',
     'settings': 'Settings',
     'nearby': 'Nearby',

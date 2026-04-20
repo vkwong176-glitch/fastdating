@@ -12,23 +12,20 @@ import '../providers/language_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/nav_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/subscription_provider.dart';
 import '../services/firebase_bootstrap.dart';
 import '../services/chat_firestore_service.dart';
 import '../services/chat_receipt_cookies.dart';
 import '../services/feed_firestore_service.dart';
-import '../services/user_firestore_service.dart';
 import '../utils/launch_url_helper.dart';
-import '../utils/mock_data.dart';
 import '../widgets/main_tab_app_bar.dart';
 import '../widgets/user_avatar_live.dart';
 import '../widgets/chat_quota_gate.dart';
 import 'chat_detail_page.dart';
-import 'settings_page.dart';
-import 'activity_page.dart';
 
 /// 訊息頁：聊天列表
 /// 右上角橙色設定、活動按鈕；ListView 含頭像、暱稱、最後一則訊息、未讀紅點、時間
-/// 已登入：對象列表與最後預覽來自 Firestore（互配／邀聊）；下方保留示範對話
+/// 已登入：對象列表與最後預覽來自 Firestore（互配／邀聊），不附示範假資料。
 /// 進入頁面時若有待顯示通知，會同步彈出一次
 class MessagePage extends StatefulWidget {
   const MessagePage({super.key});
@@ -38,9 +35,6 @@ class MessagePage extends StatefulWidget {
 }
 
 class _MessagePageState extends State<MessagePage> {
-  /// 用於示範列表異性篩選；載入完成前不附加示範（避免閃爍）
-  String? _genderForDemo;
-
   /// `conversationId` → 最後預覽指紋（略過首次快照用）。
   final Map<String, String> _conversationListFingerprints = {};
 
@@ -55,7 +49,6 @@ class _MessagePageState extends State<MessagePage> {
       final provider =
           Provider.of<NotificationProvider>(context, listen: false);
       if (provider.hasPending) provider.showAllPendingOnce(context);
-      _loadGenderForDemoList();
     });
   }
 
@@ -89,28 +82,10 @@ class _MessagePageState extends State<MessagePage> {
     }
   }
 
-  Future<void> _loadGenderForDemoList() async {
-    if (!FirebaseBootstrap.isReady) return;
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final uid = auth.uid;
-    if (uid == null) return;
-    final g = await UserFirestoreService.instance.fetchUserGender(uid);
-    if (!mounted) return;
-    setState(() => _genderForDemo = g);
-  }
-
-  /// 真實對話在上；示範在下。[seed] 固定為 uid hash，串流更新時示範列不重排。
-  List<Map<String, dynamic>> _mergedChatList({
-    required List<Map<String, dynamic>> real,
-    required String uid,
-  }) {
-    final sortedReal = _sortChatsByUnreadThenTime(real);
-    if (_genderForDemo == null) return sortedReal;
-    final demo = getRandomOppositeSexChatList(
-      myGender: _genderForDemo!,
-      seed: uid.hashCode,
-    );
-    return [...sortedReal, ..._sortChatsByUnreadThenTime(demo)];
+  List<Map<String, dynamic>> _mergedChatList(
+    List<Map<String, dynamic>> real,
+  ) {
+    return _sortChatsByUnreadThenTime(real);
   }
 
   List<Map<String, dynamic>> _mergePromotionAdsIntoChats(
@@ -247,6 +222,24 @@ class _MessagePageState extends State<MessagePage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFreeChatQuotaTip(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
+    return Material(
+      color: const Color(0xFFFFF8E1),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Text(
+          lang.getString('message_page_free_chat_quota_tip'),
+          style: TextStyle(
+            fontSize: 13 + 0.1 * AppConstants.logicalPxPerCm,
+            height: 1.35,
+            color: Colors.black87,
+          ),
         ),
       ),
     );
@@ -406,6 +399,10 @@ class _MessagePageState extends State<MessagePage> {
     final timeColor = isMobile ? Colors.black : AppConstants.grey;
 
     if (FirebaseBootstrap.isReady && auth.isLogin && auth.uid != null) {
+      final subscriptionProvider =
+          Provider.of<SubscriptionProvider>(context);
+      final showFreeChatTip =
+          !subscriptionProvider.isSubscriptionActiveUnlimited;
       return Scaffold(
         appBar: MainTabAppBar(
           title: langProvider.getString('message'),
@@ -436,53 +433,85 @@ class _MessagePageState extends State<MessagePage> {
           ],
         ),
         backgroundColor: Colors.white,
-        body: StreamBuilder<List<Map<String, dynamic>>>(
-          stream:
-              ChatFirestoreService.instance.watchMyConversationList(auth.uid!),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return Center(child: Text('讀取失敗：${snapshot.error}'));
-            }
-            final real = snapshot.data ?? [];
-            if (_genderForDemo == null && real.isEmpty) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              _syncConversationListFingerprints(real);
-              if (kIsWeb) {
-                var sum = 0;
-                for (final item in real) {
-                  sum += _unreadCount(item);
-                }
-                ChatReceiptCookies.setUnreadTotalHint(sum);
-              }
-            });
-            final baseChatList = _mergedChatList(real: real, uid: auth.uid!);
-            final promotionPosts = Provider.of<FeedProvider>(context).userPosts;
-            final chatList = _mergePromotionAdsIntoChats(
-              baseChatList,
-              promotionPosts,
-              pageSalt: 'message_${auth.uid!}',
-            );
-            return _buildConversationListView(
-              context: context,
-              chatList: chatList,
-              previewBoost: previewBoost,
-              mobileTimeFs: mobileTimeFs,
-              timeColor: timeColor,
-            );
-          },
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (showFreeChatTip) _buildFreeChatQuotaTip(context),
+            Expanded(
+              child: StreamBuilder<List<Map<String, dynamic>>>(
+                stream: ChatFirestoreService.instance
+                    .watchMyConversationList(auth.uid!),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(child: Text('讀取失敗：${snapshot.error}'));
+                  }
+                  final real = snapshot.data ?? [];
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      !snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    _syncConversationListFingerprints(real);
+                    if (kIsWeb) {
+                      var sum = 0;
+                      for (final item in real) {
+                        sum += _unreadCount(item);
+                      }
+                      ChatReceiptCookies.setUnreadTotalHint(sum);
+                    }
+                  });
+                  final baseChatList = _mergedChatList(real);
+                  final promotionPosts =
+                      Provider.of<FeedProvider>(context).userPosts;
+                  final chatList = _mergePromotionAdsIntoChats(
+                    baseChatList,
+                    promotionPosts,
+                    pageSalt: 'message_${auth.uid!}',
+                  );
+                  return _buildConversationListView(
+                    context: context,
+                    chatList: chatList,
+                    previewBoost: previewBoost,
+                    mobileTimeFs: mobileTimeFs,
+                    timeColor: timeColor,
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       );
     }
 
     final promotionPosts = Provider.of<FeedProvider>(context).userPosts;
     final chatList = _mergePromotionAdsIntoChats(
-      getMockChatList(),
+      const [],
       promotionPosts,
       pageSalt: 'message_guest',
     );
+
+    final guestBody = chatList.isEmpty
+        ? Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                langProvider.getString('message_list_guest_hint'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade800,
+                ),
+              ),
+            ),
+          )
+        : _buildConversationListView(
+            context: context,
+            chatList: chatList,
+            previewBoost: previewBoost,
+            mobileTimeFs: mobileTimeFs,
+            timeColor: timeColor,
+          );
 
     return Scaffold(
       appBar: MainTabAppBar(
@@ -514,13 +543,7 @@ class _MessagePageState extends State<MessagePage> {
         ],
       ),
       backgroundColor: Colors.white,
-      body: _buildConversationListView(
-        context: context,
-        chatList: chatList,
-        previewBoost: previewBoost,
-        mobileTimeFs: mobileTimeFs,
-        timeColor: timeColor,
-      ),
+      body: guestBody,
     );
   }
 }
