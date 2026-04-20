@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -114,15 +113,12 @@ String? _globalRedirect(BuildContext context, GoRouterState state) {
   if (path == '/one-sentence') {
     return '/talking';
   }
-  if (kIsWeb && path == '/') {
-    return '/login';
-  }
   return null;
 }
 
 final GoRouter appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
-  initialLocation: kIsWeb ? '/login' : '/',
+  initialLocation: '/',
   debugLogDiagnostics: false,
   redirect: _globalRedirect,
   observers: [

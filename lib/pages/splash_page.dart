@@ -10,8 +10,8 @@ import '../utils/constants.dart';
 import '../utils/responsive_layout.dart';
 import '../widgets/pressable_opacity.dart';
 
-/// 啟動頁（**僅 iOS／Android 使用**；Web 首屏直接 [LoginPage]）。
-/// 漸層背景、中央品牌圖、登入／註冊；已登入會員導向 `/main`。
+/// 啟動頁：漸層背景、中央品牌圖、登入／註冊。
+/// Web：首屏為本頁，約 2 秒內自動前往 [LoginPage]（已登入者改導向 `/main`）。
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
@@ -27,7 +27,7 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(seconds: 1), () {
+    _timer = Timer(const Duration(seconds: 2), () {
       _navigateToLogin();
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
