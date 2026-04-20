@@ -38,7 +38,8 @@ const double _kPublishActionsRightInset = 0.7 * AppConstants.logicalPxPerCm;
 const double _kPublishActionGap = 0.1 * AppConstants.logicalPxPerCm;
 /// 左欄：內距 + 首頁掣 + 間距 +「想講～」
 const double _kPublishAppBarAfterHomeGap = 8.0;
-const double _kPublishAppBarTalkChipEstWidth = 104.0;
+/// 「想講～」掣寬度估算（與 [_kPublishTalkButtonScale] 同步，供頂欄置中）
+const double _kPublishAppBarTalkChipEstWidth = 83.0;
 const double _kPublishAppBarLeadingWidth = _kPublishLeadingInset +
     MainTabAppBar.actionButtonSize +
     _kPublishAppBarAfterHomeGap +
@@ -46,8 +47,8 @@ const double _kPublishAppBarLeadingWidth = _kPublishLeadingInset +
 const double _kPublishActionsWidth =
     2 * MainTabAppBar.actionButtonSize + _kPublishActionGap;
 
-/// 「想講～」按鈕相對原設計放大比例（+40%）
-const double _kPublishTalkButtonScale = 1.4;
+/// 「想講～」按鈕相對原設計比例（原 +40%，再縮 20% → 1.4×0.8）
+const double _kPublishTalkButtonScale = 1.12;
 
 /// 與頂端（AppBar 下第一個可捲動區）約 0.5cm
 const double _kPublishScrollTopInset =
@@ -76,6 +77,15 @@ String? _stripCounterInviteHashtag(String? hashtags) {
       .where((s) => s.isNotEmpty && !s.contains('反邀約'))
       .join(' ');
   return parts.isEmpty ? null : parts;
+}
+
+/// 會員端顯示：舊資料標籤「#宣傳貼文」改為「#廣告」。
+String? _formatAdHashtagsForDisplay(String? hashtags) {
+  final s = _stripCounterInviteHashtag(hashtags);
+  if (s == null || s.isEmpty) return null;
+  return s
+      .replaceAll('#宣傳貼文', '#廣告')
+      .replaceAll('宣傳貼文', '廣告');
 }
 
 /// 配對邀請一則（接受進入聊天、拒絕則從列表移除）
@@ -232,16 +242,9 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
     double desktopFs,
   ) {
     final lang = Provider.of<LanguageProvider>(context, listen: false);
-    final hasInvites = (snapshot.data ?? []).isNotEmpty;
     final headingStyle = TextStyle(
       fontSize: 15 + desktopFs + _kPublishContentTextBoost,
       fontWeight: FontWeight.w600,
-      color: AppConstants.grey,
-    );
-    final introStyle = TextStyle(
-      fontSize: 13 + desktopFs + _kPublishContentTextBoost,
-      fontWeight: FontWeight.w400,
-      height: 1.45,
       color: AppConstants.grey,
     );
     return Column(
@@ -251,15 +254,7 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
           lang.getString('publish_invites_section_heading'),
           style: headingStyle,
         ),
-        if (hasInvites) ...[
-          const SizedBox(height: 6),
-          Text(
-            lang.getString('publish_invites_section_intro'),
-            style: introStyle,
-          ),
-          const SizedBox(height: 12),
-        ] else
-          const SizedBox(height: 12),
+        const SizedBox(height: 12),
         _buildFirestoreInvitesFromSnapshot(snapshot, desktopFs),
       ],
     );
@@ -267,16 +262,9 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
 
   Widget _buildDemoInviteSectionWithHeading(double desktopFs) {
     final lang = Provider.of<LanguageProvider>(context, listen: false);
-    final hasInvites = _invitations.isNotEmpty;
     final headingStyle = TextStyle(
       fontSize: 15 + desktopFs + _kPublishContentTextBoost,
       fontWeight: FontWeight.w600,
-      color: AppConstants.grey,
-    );
-    final introStyle = TextStyle(
-      fontSize: 13 + desktopFs + _kPublishContentTextBoost,
-      fontWeight: FontWeight.w400,
-      height: 1.45,
       color: AppConstants.grey,
     );
     return Column(
@@ -286,15 +274,7 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
           lang.getString('publish_invites_section_heading'),
           style: headingStyle,
         ),
-        if (hasInvites) ...[
-          const SizedBox(height: 6),
-          Text(
-            lang.getString('publish_invites_section_intro'),
-            style: introStyle,
-          ),
-          const SizedBox(height: 12),
-        ] else
-          const SizedBox(height: 12),
+        const SizedBox(height: 12),
         _buildDemoInvitationSection(desktopFs),
       ],
     );
@@ -931,7 +911,7 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
         myUid != null &&
         FirebaseBootstrap.isReady;
     final displayTime = timeLabel ?? '';
-    final displayHashtags = _stripCounterInviteHashtag(hashtags);
+    final displayHashtags = _formatAdHashtagsForDisplay(hashtags);
     final isLiked = _likedPostIds.contains(postId);
     final headline = authorAge != null ? '$name, $authorAge' : name;
     final trimmedExternalLink = (externalLink ?? '').trim();

@@ -582,10 +582,10 @@ class FeedFirestoreService {
         : _db.collection(FirestorePaths.publicFeedPosts).doc();
     final payload = <String, dynamic>{
       'authorUid': adPromotionAuthorUid,
-      'authorName': trimmedName.isNotEmpty ? trimmedName : '宣傳貼文',
+      'authorName': trimmedName.isNotEmpty ? trimmedName : '廣告',
       'content': trimmedContent.isNotEmpty ? trimmedContent : trimmedLink,
       'tag': '宣傳',
-      'hashtags': '#宣傳貼文',
+      'hashtags': '#廣告',
       'iconColor': const Color(0xFFE65100).toARGB32(),
       if (trimmedImageUrl.isNotEmpty) 'imageUrl': trimmedImageUrl,
       if (trimmedLink.isNotEmpty) 'externalLink': trimmedLink,

@@ -94,86 +94,115 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
             ),
           ],
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: hasImageBytes
-                  ? Image.memory(
-                      Uint8List.fromList(promotion.imageBytes!),
-                      width: 72,
-                      height: 72,
-                      fit: BoxFit.cover,
-                    )
-                  : imageUrl.isNotEmpty
-                      ? Image.network(
-                          imageUrl,
+            Align(
+              alignment: Alignment.centerRight,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.red, width: 1.5),
+                ),
+                alignment: Alignment.center,
+                child: const Text(
+                  '廣告',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.red,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: hasImageBytes
+                      ? Image.memory(
+                          Uint8List.fromList(promotion.imageBytes!),
                           width: 72,
                           height: 72,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            width: 72,
-                            height: 72,
-                            color: const Color(0xFFFFECB3),
-                            child:
-                                const Icon(Icons.campaign, color: Colors.brown),
-                          ),
                         )
-                      : Container(
-                          width: 72,
-                          height: 72,
-                          color: const Color(0xFFFFECB3),
-                          child:
-                              const Icon(Icons.campaign, color: Colors.brown),
+                      : imageUrl.isNotEmpty
+                          ? Image.network(
+                              imageUrl,
+                              width: 72,
+                              height: 72,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 72,
+                                height: 72,
+                                color: const Color(0xFFFFECB3),
+                                child: const Icon(Icons.campaign,
+                                    color: Colors.brown),
+                              ),
+                            )
+                          : Container(
+                              width: 72,
+                              height: 72,
+                              color: const Color(0xFFFFECB3),
+                              child: const Icon(Icons.campaign,
+                                  color: Colors.brown),
+                            ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (title.isNotEmpty &&
+                          !isAdPromotionPlaceholderName(title)) ...[
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (title.isNotEmpty && title != '宣傳貼文') ...[
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
+                        const SizedBox(height: 4),
+                      ],
+                      Text(
+                        promotion.content,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black,
+                          height: 1.35,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                  ],
-                  Text(
-                    promotion.content,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.black,
-                      height: 1.35,
-                    ),
+                      if (link.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          link,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue.shade700,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                  if (link.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      link,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.blue.shade700,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+                ),
+                if (link.isNotEmpty)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8),
+                    child: Icon(Icons.open_in_new, color: Colors.black54),
+                  ),
+              ],
             ),
-            if (link.isNotEmpty)
-              const Padding(
-                padding: EdgeInsets.only(left: 8),
-                child: Icon(Icons.open_in_new, color: Colors.black54),
-              ),
           ],
         ),
       ),

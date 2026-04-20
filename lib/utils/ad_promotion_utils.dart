@@ -1,3 +1,11 @@
+/// 廣告貼文預設顯示名稱（舊資料「宣傳貼文」與新資料「廣告」皆視為占位，不重複當標題）。
+const Set<String> kAdPromotionPlaceholderNames = {'宣傳貼文', '廣告'};
+
+bool isAdPromotionPlaceholderName(String? name) {
+  final t = name?.trim() ?? '';
+  return kAdPromotionPlaceholderNames.contains(t);
+}
+
 int stablePromotionSeed(String raw) {
   var hash = 0;
   for (final unit in raw.codeUnits) {

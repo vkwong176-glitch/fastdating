@@ -177,7 +177,8 @@ class _MessagePageState extends State<MessagePage> {
                 children: [
                   Row(
                     children: [
-                      if (title.isNotEmpty && title != '宣傳貼文')
+                      if (title.isNotEmpty &&
+                          !isAdPromotionPlaceholderName(title))
                         Expanded(
                           child: Text(
                             title,
@@ -187,7 +188,7 @@ class _MessagePageState extends State<MessagePage> {
                       else
                         const Spacer(),
                       Text(
-                        '推廣',
+                        '廣告',
                         style: TextStyle(
                           color: timeColor,
                           fontSize: 12 + mobileTimeFs,
