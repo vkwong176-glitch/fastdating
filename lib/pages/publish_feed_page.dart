@@ -88,6 +88,24 @@ String? _formatAdHashtagsForDisplay(String? hashtags) {
       .replaceAll('宣傳貼文', '廣告');
 }
 
+/// 廣告貼文改在右側顯示「廣告」字樣時，內文區不再重複僅 #廣告／宣傳貼文 的標籤列。
+String? _hashtagsForAdCardBody(String? displayHashtags, bool isAdPromotion) {
+  if (!isAdPromotion) return displayHashtags;
+  if (displayHashtags == null || displayHashtags.trim().isEmpty) return null;
+  final parts = displayHashtags
+      .split(RegExp(r'\s+'))
+      .map((s) => s.trim())
+      .where((s) =>
+          s.isNotEmpty &&
+          s != '#廣告' &&
+          s != '廣告' &&
+          s != '#宣傳貼文' &&
+          s != '宣傳貼文')
+      .toList();
+  if (parts.isEmpty) return null;
+  return parts.join(' ');
+}
+
 /// 配對邀請一則（接受進入聊天、拒絕則從列表移除）
 class _InvitationItem {
   final String id;
@@ -912,6 +930,7 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
         FirebaseBootstrap.isReady;
     final displayTime = timeLabel ?? '';
     final displayHashtags = _formatAdHashtagsForDisplay(hashtags);
+    final bodyHashtags = _hashtagsForAdCardBody(displayHashtags, isAdPromotion);
     final isLiked = _likedPostIds.contains(postId);
     final headline = authorAge != null ? '$name, $authorAge' : name;
     final trimmedExternalLink = (externalLink ?? '').trim();
@@ -1031,6 +1050,19 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
                       ],
                     ),
                   ),
+                  if (isAdPromotion && trimmedExternalLink.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Text(
+                        '廣告',
+                        style: TextStyle(
+                          fontSize:
+                              12 + desktopFs + _kPublishContentTextBoost,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ),
                   if (!isAdPromotion)
                     IconButton(
                       icon: Icon(
@@ -1078,7 +1110,7 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
             const SizedBox(height: 10),
           ],
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Column(
@@ -1092,11 +1124,10 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
                         height: 1.4,
                       ),
                     ),
-                    if (displayHashtags != null &&
-                        displayHashtags.isNotEmpty) ...[
+                    if (bodyHashtags != null && bodyHashtags.isNotEmpty) ...[
                       const SizedBox(height: 6),
                       Text(
-                        displayHashtags,
+                        bodyHashtags,
                         style: TextStyle(
                           fontSize: 12 + desktopFs + _kPublishContentTextBoost,
                           color: Colors.blue.shade700,
@@ -1128,23 +1159,39 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
               if (isAdPromotion && trimmedExternalLink.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(left: 8),
-                  child: TextButton(
-                    onPressed: () =>
-                        _openPromotionLink(postId, trimmedExternalLink),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      backgroundColor: AppConstants.primaryColor,
-                      minimumSize: Size.zero,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '廣告',
+                        style: TextStyle(
+                          fontSize:
+                              13 + desktopFs + _kPublishContentTextBoost,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue.shade700,
+                        ),
                       ),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: Text(
-                      '前往連結',
-                      style: TextStyle(fontSize: 13 + desktopFs),
-                    ),
+                      const SizedBox(height: 6),
+                      TextButton(
+                        onPressed: () =>
+                            _openPromotionLink(postId, trimmedExternalLink),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: AppConstants.primaryColor,
+                          minimumSize: Size.zero,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          '前往連結',
+                          style: TextStyle(fontSize: 13 + desktopFs),
+                        ),
+                      ),
+                    ],
                   ),
                 )
               else if (canReport)
