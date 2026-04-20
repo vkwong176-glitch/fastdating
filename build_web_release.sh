@@ -5,8 +5,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
-echo ">> flutter build web --release --source-maps (CanvasKit 同網域，減少跨網域延遲)"
-flutter build web --release --source-maps --no-wasm-dry-run --no-web-resources-cdn
+# CanvasKit 使用官方 CDN（gstatic），與 main.dart.js 並行下載，慢速網路下通常比單一來源連續拉整包 wasm 更有利 Speed Index。
+echo ">> flutter build web --release --source-maps -O4 (CanvasKit via CDN)"
+flutter build web --release --source-maps --no-wasm-dry-run --optimization-level=4
 
 FLUTTER_ROOT="$(python3 <<'PY'
 import os
