@@ -118,6 +118,32 @@
         ]
       },
       {
+        "source": "**/*.map",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json; charset=utf-8"
+          },
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=3600, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "**/main.dart.js.map",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json; charset=utf-8"
+          },
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate, max-age=0"
+          }
+        ]
+      },
+      {
         "source": "**/*.@(js|css|ico|png|jpg|jpeg|gif|svg|webp|woff|woff2|wasm|json|ttf|otf)",
         "headers": [
           {

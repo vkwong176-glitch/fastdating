@@ -55,6 +55,7 @@
 !/firestore.indexes.json
 !/storage.rules
 !/run_web.sh
+!/build_web_release.sh
 
 # 靜態資源（若專案有）
 !/assets/

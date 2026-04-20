@@ -29,6 +29,10 @@
   <link rel="canonical" href="https://fastdating1.com/">
   <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml">
 
+  <!-- LCP／CanvasKit：預先連線 gstatic，縮短首屏資源延遲 -->
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="dns-prefetch" href="https://www.gstatic.com">
+
   <!-- Open Graph（分享連結／部分搜尋結果參考） -->
   <meta property="og:site_name" content="Fast Dating">
   <meta property="og:title" content="Fast Dating｜Speed Dating 單身配對・多元交友平台">
@@ -54,8 +58,33 @@
   <link rel="shortcut icon" type="image/png" href="favicon.png"/>
 
   <link rel="manifest" href="manifest.json">
+
+  <!-- 首屏靜態內容：供 Lighthouse／PageSpeed 量到 LCP（Flutter Canvas 載入前） -->
+  <style>
+    #fd-splash {
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fafafa;
+    }
+    #fd-splash.fd-hidden {
+      display: none;
+    }
+  </style>
 </head>
 <body>
+  <div id="fd-splash" aria-hidden="true">
+    <img src="icons/fd-icon-192.png" width="96" height="96" alt="Fast Dating" fetchpriority="high" decoding="async">
+  </div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var el = document.getElementById('fd-splash');
+      if (el) el.classList.add('fd-hidden');
+    });
+  </script>
   <!-- 解除舊版 Service Worker，否則瀏覽器可能持續執行舊 main.dart.js（版面與管理員登入不會更新） -->
   <script>
     if ('serviceWorker' in navigator) {
