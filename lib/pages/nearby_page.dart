@@ -98,28 +98,6 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.red, width: 1.5),
-                ),
-                alignment: Alignment.center,
-                child: const Text(
-                  '廣告',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.red,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -202,6 +180,30 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
                     child: Icon(Icons.open_in_new, color: Colors.black54),
                   ),
               ],
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.red, width: 1.5),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    '廣告',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.red,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
