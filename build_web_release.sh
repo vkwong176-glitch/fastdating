@@ -5,8 +5,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
-echo ">> flutter build web --release --source-maps"
-flutter build web --release --source-maps --no-wasm-dry-run
+echo ">> flutter build web --release --source-maps (CanvasKit 同網域，減少跨網域延遲)"
+flutter build web --release --source-maps --no-wasm-dry-run --no-web-resources-cdn
 
 FLUTTER_ROOT="$(python3 <<'PY'
 import os

@@ -33,6 +33,10 @@
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
   <link rel="dns-prefetch" href="https://www.gstatic.com">
 
+  <!-- 盡早開始下載 Flutter 入口腳本（與下方 defer 搭配） -->
+  <link rel="preload" href="flutter_bootstrap.js" as="script">
+  <link rel="preload" href="main.dart.js" as="script">
+
   <!-- Open Graph（分享連結／部分搜尋結果參考） -->
   <meta property="og:site_name" content="Fast Dating">
   <meta property="og:title" content="Fast Dating｜Speed Dating 單身配對・多元交友平台">
@@ -59,7 +63,7 @@
 
   <link rel="manifest" href="manifest.json">
 
-  <!-- 首屏靜態內容：供 Lighthouse／PageSpeed 量到 LCP（Flutter Canvas 載入前） -->
+  <!-- 首屏靜態內容：放大 logo、深色底，與 Flutter 載入前顯示一致 -->
   <style>
     #fd-splash {
       position: fixed;
@@ -68,16 +72,21 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #fafafa;
+      background: #000000;
     }
     #fd-splash.fd-hidden {
       display: none;
+    }
+    #fd-splash .fd-splash-img {
+      width: min(72vw, 280px);
+      height: auto;
+      max-width: 280px;
     }
   </style>
 </head>
 <body>
   <div id="fd-splash" aria-hidden="true">
-    <img src="icons/fd-icon-192.png" width="96" height="96" alt="Fast Dating" fetchpriority="high" decoding="async">
+    <img class="fd-splash-img" src="icons/fd-icon-192.png" width="280" height="280" alt="Fast Dating" fetchpriority="high" decoding="async">
   </div>
   <script>
     window.addEventListener('flutter-first-frame', function () {
@@ -101,6 +110,6 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <script src="flutter_bootstrap.js" async></script>
+  <script src="flutter_bootstrap.js" defer></script>
 </body>
 </html>

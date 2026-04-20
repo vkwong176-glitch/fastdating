@@ -51,10 +51,14 @@ class _LoginPageState extends State<LoginPage> {
     _loadSavedCredentials();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      precacheImage(
-        const AssetImage(AppConstants.brandingLoveBannerAsset),
-        context,
-      );
+      // 延後預載大圖，避免與首幀主執行緒競爭（行動網路／PageSpeed 主執行緒時間）
+      Future<void>.delayed(const Duration(milliseconds: 80), () {
+        if (!mounted) return;
+        precacheImage(
+          const AssetImage(AppConstants.brandingLoveBannerAsset),
+          context,
+        );
+      });
       final auth = Provider.of<AuthProvider>(context, listen: false);
       auth.syncFromFirebaseAuth();
       void onAuth() {
