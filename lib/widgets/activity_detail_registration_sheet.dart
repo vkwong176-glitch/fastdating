@@ -653,8 +653,8 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
                           child: ElevatedButton(
                             onPressed: _openManualTransfer,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFFE0B2),
-                              foregroundColor: Colors.black87,
+                              backgroundColor: AppConstants.primaryColor,
+                              foregroundColor: Colors.white,
                               elevation: 0,
                               padding: const EdgeInsets.symmetric(
                                 vertical: 14,

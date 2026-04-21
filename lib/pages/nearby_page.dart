@@ -1,9 +1,7 @@
 import 'dart:async' show unawaited;
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/feed_provider.dart';
 import '../utils/constants.dart';
@@ -37,6 +35,12 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
   List<Map<String, dynamic>> _users = [];
   bool _loading = true;
   String? _error;
+
+  /// bottom nav：0 首頁／1 訊息／2 邀聊／3 訂閱／4 附近（與 [MainShell._pageAt] 一致）
+  static const int _kShellIndexNearby = 4;
+
+  NavProvider? _navForNearbyVisibility;
+  bool _loadInProgress = false;
 
   /// 探索對象性別（與 [AppConstants.discoverOppositeGender] 同步，依「我的性別」自動為異性）
   String _genderFilter = 'male';
@@ -210,6 +214,10 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _navForNearbyVisibility = Provider.of<NavProvider>(context, listen: false);
+    _navForNearbyVisibility!.addListener(_onMainShellNavChanged);
+    /// [IndexedStack] 會預載所有分頁：勿在首頁／訊息等分頁仍顯示時就 [_load] 與請求 GPS；
+    /// 首次同步於下方 postFrame（待 [MainShell] 設好 [NavProvider.currentIndex]）。
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ScreenCapturePlatform.allowScreenshots();
       if (!mounted) return;
@@ -217,15 +225,27 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
           Provider.of<AuthProvider>(context, listen: false);
       _authForNearbyListener!.addListener(_onAuthProfileForNearby);
       _syncNearbyOppositeGender();
+      _onMainShellNavChanged();
     });
-    _load();
   }
 
   @override
   void dispose() {
+    _navForNearbyVisibility?.removeListener(_onMainShellNavChanged);
     WidgetsBinding.instance.removeObserver(this);
     _authForNearbyListener?.removeListener(_onAuthProfileForNearby);
     super.dispose();
+  }
+
+  /// 僅當使用者正在檢視「附近的人」分頁時才載入列表（含定位）。
+  void _onMainShellNavChanged() {
+    if (!mounted) return;
+    final nav = _navForNearbyVisibility;
+    if (nav == null) return;
+    if (nav.currentIndex != _kShellIndexNearby) {
+      return;
+    }
+    unawaited(_load());
   }
 
   @override
@@ -485,6 +505,10 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
 
   Future<void> _load() async {
     if (!mounted) return;
+    final nav = Provider.of<NavProvider>(context, listen: false);
+    if (nav.currentIndex != _kShellIndexNearby) return;
+    if (_loadInProgress) return;
+    _loadInProgress = true;
     setState(() {
       _loading = true;
       _error = null;
@@ -576,6 +600,8 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
         _loading = false;
         _users = [];
       });
+    } finally {
+      _loadInProgress = false;
     }
   }
 

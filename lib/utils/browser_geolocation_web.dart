@@ -22,7 +22,8 @@ Future<BrowserGeolocationResult?> getBrowserGeolocation({
         .getCurrentPosition(
       enableHighAccuracy: true,
       timeout: timeout,
-      maximumAge: Duration.zero,
+      /// 避免每次重新整理都強制新定位而反覆觸發瀏覽器／系統定位詢問。
+      maximumAge: const Duration(minutes: 5),
     )
         .then((pos) {
       if (completer.isCompleted) return;

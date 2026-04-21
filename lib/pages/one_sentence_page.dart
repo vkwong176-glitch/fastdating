@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../utils/constants.dart';
+import '../providers/auth_provider.dart';
 import '../providers/interest_provider.dart';
 import '../providers/feed_provider.dart';
 import '../providers/language_provider.dart';
@@ -250,6 +253,83 @@ class _OneSentencePageState extends State<OneSentencePage>
           activeColor: const Color(0xFF26A69A),
         ),
       ],
+    );
+  }
+
+  /// 「顯示我的性別」列：左標題、中間 男／女 滑動分段、右側是否顯示於配對卡。
+  Widget _buildShowGenderRow({
+    required double titleFontSize,
+    required double subtitleFontSize,
+  }) {
+    return Consumer<AuthProvider>(
+      builder: (context, auth, _) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Text(
+                '顯示我的性別',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: titleFontSize,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 4, right: 6),
+              child: SizedBox(
+                width: 148,
+                height: 40,
+                child: CupertinoSlidingSegmentedControl<String>(
+                  groupValue: auth.profileGender,
+                  // 軌道白底；選中塊與右側 Switch、「開始聊天」按鈕同色深綠
+                  backgroundColor: Colors.white,
+                  thumbColor: const Color(0xFF26A69A),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  children: <String, Widget>{
+                    'male': Center(
+                      child: Text(
+                        '男',
+                        style: TextStyle(
+                          fontSize: subtitleFontSize,
+                          fontWeight: FontWeight.w600,
+                          color: auth.profileGender == 'male'
+                              ? Colors.white
+                              : Colors.black87,
+                        ),
+                      ),
+                    ),
+                    'female': Center(
+                      child: Text(
+                        '女',
+                        style: TextStyle(
+                          fontSize: subtitleFontSize,
+                          fontWeight: FontWeight.w600,
+                          color: auth.profileGender == 'female'
+                              ? Colors.white
+                              : Colors.black87,
+                        ),
+                      ),
+                    ),
+                  },
+                  onValueChanged: (String? value) {
+                    if (value == null) return;
+                    unawaited(auth.setProfileGender(value));
+                  },
+                ),
+              ),
+            ),
+            Switch(
+              value: _showGenderOn,
+              onChanged: (v) => setState(() => _showGenderOn = v),
+              activeColor: const Color(0xFF26A69A),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -636,10 +716,7 @@ class _OneSentencePageState extends State<OneSentencePage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildToggleRow(
-                    title: '顯示我的性別',
-                    value: _showGenderOn,
-                    onChanged: (v) => setState(() => _showGenderOn = v),
+                  _buildShowGenderRow(
                     titleFontSize: toggleTitleFs,
                     subtitleFontSize: toggleSubtitleFs,
                   ),

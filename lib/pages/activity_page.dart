@@ -444,11 +444,16 @@ class _ActivityPageState extends State<ActivityPage> {
   static const double _compactImageToPriceGapPx = 4.0;
   /// 0.2cm 邏輯像素（價錢字級加量等）
   static const double _pointTwoCmLogicalPx = 0.2 * _cmLogicalPx;
+  /// 活動標題字級加量（題述 +0.15cm）
+  static const double _activityTitleFontBump015cmPx = 0.15 * _cmLogicalPx;
   static const double _activitySpacingHalfCmPx = _halfCmLogicalPx;
   /// 手機緊湊卡左右內距（須與 [_buildActivityCard] compact 一致）
   static const double _compactCardHorizontalPadPx = 6.0;
-  /// 僅手機格狀卡用，避免標題字過大佔滿高度。
-  static const double _mobileCardTitleFontSize = 14.5;
+  /// 僅手機格狀卡用；基底字級 + [_activityTitleFontBump015cmPx]。
+  static const double _mobileCardTitleFontSize =
+      14.5 + _activityTitleFontBump015cmPx;
+  /// 寬螢幕活動卡標題（與原 18 同步加 0.15cm）
+  static const double _wideCardTitleFontSize = 18 + _activityTitleFontBump015cmPx;
   /// 預留兩行標題高度（與標題 [Text] height 1.15 對齊）
   static const double _compactTitleMaxLinesHeightPx =
       _mobileCardTitleFontSize * 1.15 * 2;
@@ -692,7 +697,7 @@ class _ActivityPageState extends State<ActivityPage> {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: _wideCardTitleFontSize,
                   fontWeight: FontWeight.w600,
                   color: Color(0xFF333333),
                   height: 1.0,
