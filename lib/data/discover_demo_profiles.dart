@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// 首頁探索：當 Firestore 無足夠對象時合併示範配對卡（id 以 `demo_match_` 開頭，不發雲端邀請；可進入示範聊天）。
+/// 首頁探索：當 Firestore 無足夠對象時合併示範配對卡（id 以 `demo_match_` 開頭；不發雲端邀請；按「進入聊天」僅提示黑底訊息，不開聊天頁）。
 /// 男女各 6 筆，依篩選挑選最多 [max] 筆。
 const String _demoPrefix = 'demo_match_';
 

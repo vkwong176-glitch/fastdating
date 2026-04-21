@@ -641,17 +641,32 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// 進入聊天：已有對話則開啟；否則發出邀請（對方於邀聊通知按「想」後可聊）。
+  /// [isDemoProfile] 為示範／虛假配對卡：不進聊天，改顯示黑底提示（與真實會員區隔）。
   Future<void> _onDiscoverEnterChat(
     String peerId,
     String peerName,
     String peerAvatar,
-    bool canCloudInvite,
-  ) async {
-    if (peerId.startsWith('demo_match_')) {
-      await _openChatForPeer(
-        peerId: peerId,
-        peerName: peerName,
-        peerAvatar: peerAvatar,
+    bool canCloudInvite, {
+    required bool isDemoProfile,
+  }) async {
+    if (isDemoProfile) {
+      if (!mounted) return;
+      final displayName =
+          peerName.trim().isEmpty ? '此會員' : peerName.trim();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.black87,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(12, 0, 12, 88),
+          content: Text(
+            '已通知會員名稱（$displayName），對方於邀聊通知頁面接受後即可聊天',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              height: 1.35,
+            ),
+          ),
+        ),
       );
       return;
     }
@@ -730,6 +745,7 @@ class _HomePageState extends State<HomePage> {
             peerName,
             peerAvatar,
             showInvite,
+            isDemoProfile: isDemo,
           ),
           child: Container(
             width: double.infinity,
