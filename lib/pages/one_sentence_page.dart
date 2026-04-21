@@ -285,8 +285,8 @@ class _OneSentencePageState extends State<OneSentencePage>
                 height: 40,
                 child: CupertinoSlidingSegmentedControl<String>(
                   groupValue: auth.profileGender,
-                  // 軌道白底；選中塊與右側 Switch、「開始聊天」按鈕同色深綠
-                  backgroundColor: Colors.white,
+                  // 軌道淺綠底；選中塊與右側 Switch 同色深綠 #26A69A
+                  backgroundColor: const Color(0xFFB2DFDB),
                   thumbColor: const Color(0xFF26A69A),
                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                   children: <String, Widget>{

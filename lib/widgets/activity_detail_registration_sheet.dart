@@ -13,6 +13,7 @@ import '../services/subscription_order_service.dart';
 import '../services/payment_settings_service.dart';
 import '../utils/activity_registration_price.dart';
 import '../utils/constants.dart';
+import 'manual_fps_payment_button_block.dart';
 import 'manual_payment_checkout_sheet.dart';
 import 'storage_network_image.dart';
 
@@ -644,50 +645,9 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
                 }
                 if (ps.enableManual) {
                   tiles.add(
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _openManualTransfer,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppConstants.primaryColor,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 14,
-                                horizontal: 16,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: Text(
-                              lang.getString('pay_choice_manual'),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          lang.getString('activity_payment_tap_hint'),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.red,
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
+                    ManualFpsPaymentButtonBlock(
+                      lang: lang,
+                      onPressed: _openManualTransfer,
                     ),
                   );
                 }

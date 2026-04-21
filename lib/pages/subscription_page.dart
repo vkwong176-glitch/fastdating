@@ -20,6 +20,7 @@ import '../services/user_firestore_service.dart';
 import '../providers/nav_provider.dart';
 import '../widgets/main_tab_app_bar.dart';
 import '../widgets/chat_quota_gate.dart';
+import '../widgets/manual_fps_payment_button_block.dart';
 import '../widgets/manual_payment_checkout_sheet.dart';
 import 'activity_page.dart';
 import 'upgrade_matching_page.dart';
@@ -287,15 +288,19 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
               );
             }
             if (ps.enableManual) {
+              final lang =
+                  Provider.of<LanguageProvider>(context, listen: false);
               tiles.add(
-                ListTile(
-                  leading: const Icon(Icons.account_balance_wallet_outlined),
-                  title: const Text('FPS／WeChat／銀行戶口'),
-                  subtitle: const Text('顯示轉帳資料，收據經 WhatsApp 傳送'),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _showManualTransferSheet(planName, plans);
-                  },
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: ManualFpsPaymentButtonBlock(
+                    lang: lang,
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _showManualTransferSheet(planName, plans);
+                    },
+                  ),
                 ),
               );
             }
