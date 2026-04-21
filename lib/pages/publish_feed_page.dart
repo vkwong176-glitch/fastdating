@@ -928,7 +928,8 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
         authorUid != null &&
         myUid != null &&
         FirebaseBootstrap.isReady;
-    final displayTime = timeLabel ?? '';
+    /// 宣傳貼文不顯示發布日期
+    final displayTime = isAdPromotion ? '' : (timeLabel ?? '');
     final displayHashtags = _formatAdHashtagsForDisplay(hashtags);
     final bodyHashtags = _hashtagsForAdCardBody(displayHashtags, isAdPromotion);
     final isLiked = _likedPostIds.contains(postId);

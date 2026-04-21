@@ -11,7 +11,6 @@ import '../services/firebase_bootstrap.dart';
 import '../utils/activity_title_image.dart';
 import '../utils/constants.dart';
 import '../utils/event_url_slug.dart';
-import '../seo/seo_h1_banner.dart';
 import '../widgets/activity_detail_registration_sheet.dart';
 import '../widgets/storage_network_image.dart';
 
@@ -37,6 +36,10 @@ class _ActivityItem {
 
   /// 報名人數上限 1–10（後台 [event_cms]／[activities.maxParticipants]）
   final int maxParticipants;
+
+  /// 後台可填多個；會員報名頁橫向滑動選擇（[activities.activityDateOptions]）
+  final List<String> activityDateOptions;
+
   _ActivityItem({
     required this.id,
     required this.title,
@@ -48,7 +51,15 @@ class _ActivityItem {
     this.activityDetail,
     this.registrationPosterUrl,
     this.maxParticipants = 10,
+    this.activityDateOptions = const [],
   });
+
+  /// 與後台同步：[activities.imageUrl] 優先；若僅上傳報名海報則同 [Sync] 使用 [registrationPosterUrl]。
+  String get resolvedListImageUrl {
+    final a = imageUrl.trim();
+    if (a.isNotEmpty) return a;
+    return registrationPosterUrl?.trim() ?? '';
+  }
 }
 
 /// 列表／格狀廣告只顯示價錢字樣，不顯示付款方式（後台可能把金額與付款方式寫在同一欄或多行）。
@@ -137,6 +148,14 @@ class _ActivityPageState extends State<ActivityPage> {
     } else if (capRaw is num) {
       cap = capRaw.toInt().clamp(1, 10);
     }
+    final dateOpts = <String>[];
+    final rawDates = m['activityDateOptions'];
+    if (rawDates is List) {
+      for (final e in rawDates) {
+        final s = e.toString().trim();
+        if (s.isNotEmpty) dateOpts.add(s);
+      }
+    }
     return _ActivityItem(
       id: d.id,
       title: title,
@@ -149,6 +168,7 @@ class _ActivityPageState extends State<ActivityPage> {
           detailRaw != null && detailRaw.isNotEmpty ? detailRaw : null,
       registrationPosterUrl: posterRaw.isNotEmpty ? posterRaw : null,
       maxParticipants: cap,
+      activityDateOptions: dateOpts,
     );
   }
 
@@ -158,62 +178,18 @@ class _ActivityPageState extends State<ActivityPage> {
     super.dispose();
   }
 
-  /// 固定 6 筆虛擬活動（與後台真實活動合併顯示；其餘舊 mock 已移除）。
-  List<_ActivityItem> _buildMockActivities() {
-    const titles = [
-      '單身男女手工藝工作坊',
-      '近期有客問以下~異性搭伙生活配對',
-      '全年無限次配對計劃',
-      '周末咖啡約會',
-      '行山郊遊活動',
-      '電影分享會',
-    ];
-    const prices = [
-      '\$380/堂 每週3堂\$1100',
-      '配對費\$1000 全年無限次',
-      '全年無限次配對\$1000',
-      '\$150/位',
-      '\$200/位',
-      '\$180/位',
-    ];
-    return List.generate(titles.length, (i) {
-      final id = 'act_$i';
-      return _ActivityItem(
-        id: id,
-        title: titles[i],
-        imageUrl: '',
-        price: prices[i],
-      );
-    });
-  }
-
-  /// 後台真實活動置前，再接固定虛擬活動；同 [id] 只保留先出現的一筆（真實優先）。
-  List<_ActivityItem> _mergeRealWithVirtual(List<_ActivityItem> real) {
-    final virtual = _buildMockActivities();
-    final seen = <String>{};
-    final out = <_ActivityItem>[];
-    for (final r in real) {
-      if (seen.add(r.id)) out.add(r);
-    }
-    for (final v in virtual) {
-      if (seen.add(v.id)) out.add(v);
-    }
-    return out;
-  }
-
+  /// 搜尋依活動標題、副標題與顯示價錢字串（不比對長篇內文）。
   List<_ActivityItem> _filteredActivities(List<_ActivityItem> all) {
-    if (_keyword.isEmpty) return all;
-    final k = _keyword.toLowerCase();
-    return all
-        .where(
-          (a) =>
-              a.title.toLowerCase().contains(k) ||
-              a.price.toLowerCase().contains(k) ||
-              (a.subtitle?.toLowerCase().contains(k) ?? false) ||
-              (a.paymentMethodLabel?.toLowerCase().contains(k) ?? false) ||
-              (a.activityDetail?.toLowerCase().contains(k) ?? false),
-        )
-        .toList();
+    final raw = _keyword.trim();
+    if (raw.isEmpty) return all;
+    final k = raw.toLowerCase();
+    return all.where((a) {
+      if (a.title.toLowerCase().contains(k)) return true;
+      final sub = a.subtitle?.trim() ?? '';
+      if (sub.isNotEmpty && sub.toLowerCase().contains(k)) return true;
+      if (a.price.toLowerCase().contains(k)) return true;
+      return false;
+    }).toList();
   }
 
   int _totalPages(List<_ActivityItem> filtered, int perPage) =>
@@ -268,7 +244,14 @@ class _ActivityPageState extends State<ActivityPage> {
               (constraints.maxWidth - paddingH - gapsH) / crossCount;
           final double ratio;
           if (isMobile) {
-            ratio = _mobileGridAspectRatio;
+            /// 格高 ≈ 固定區塊 + 正方形圖邊長（≈ contentW），避免白底卡面在按鈕下多出空白。
+            final contentW = (cellWidth - _compactCardHorizontalPadPx * 2)
+                .clamp(0.0, double.infinity);
+            final targetCellHeight =
+                _compactCellFixedNoImagePx + contentW;
+            ratio = targetCellHeight > 1.0
+                ? cellWidth / targetCellHeight
+                : _mobileGridAspectRatioFallback;
           } else {
             final cellHeight = _contentBoxMaxHeightPx;
             ratio = cellWidth / cellHeight;
@@ -293,7 +276,6 @@ class _ActivityPageState extends State<ActivityPage> {
                 context,
                 pageItems[index],
                 compact: isMobile,
-                cellWidth: cellWidth,
               ),
             ),
           );
@@ -342,9 +324,9 @@ class _ActivityPageState extends State<ActivityPage> {
       return Scaffold(
         backgroundColor: _activityPageBackground,
         appBar: _buildActivityAppBar(context),
-        body: _buildActivityListBody(
-          allActivities: _buildMockActivities(),
-          seoPath: widget.seoPath,
+        body: const ColoredBox(
+          color: _activityPageBackground,
+          child: Center(child: CircularProgressIndicator()),
         ),
       );
     }
@@ -382,11 +364,10 @@ class _ActivityPageState extends State<ActivityPage> {
         }
         final docs = snapshot.data!.docs.toList()
           ..sort(_compareDocsByUpdatedAtDesc);
-        final realActivities = docs
+        final allActivities = docs
             .map((d) => _itemFromFirestoreDoc(d, lang))
             .whereType<_ActivityItem>()
             .toList();
-        final allActivities = _mergeRealWithVirtual(realActivities);
 
         final wantSlug = widget.initialEventSlug?.toLowerCase().trim();
         if (wantSlug != null &&
@@ -445,46 +426,79 @@ class _ActivityPageState extends State<ActivityPage> {
   static const Color _activityPageBackground = Color(0xFFFFF9E6);
   static const Color _activitySearchStripBackground = Color(0xFFFFF3CC);
 
-  /// 8cm ≈ 302px；1cm ≈ 38px；手機活動框：寬 4cm、高 4.5cm
+  /// 1cm ≈ 38px；手機格寬 4cm；高度與 [childAspectRatio] 一致，略緊貼內容以減少卡底留白。
+  /// 過矮時 [Column] 內 [Expanded] 會變 0，畫面變成標題下直接接價錢（圖被擠沒）。
   static const double _imageSizePx = 302;
   static const double _contentBoxMaxHeightPx = 492;
   static const double _edgePadding1cmPx = 38;
-  static const double _imageTopGap1cmPx = 38;
-  static const double _cardGapPx = 8;
   static const double _detailBottomGap1cmPx = 38;
   static const double _cmLogicalPx = 38.0;
   static const double _halfCmLogicalPx = 0.5 * _cmLogicalPx;
+  /// 手機活動卡頂部白邊（0.15cm）
+  static const double _compactCardTopEdgePx = 0.15 * _cmLogicalPx;
+  /// 底部白邊：在頂部 0.15cm 基礎上再向上收約 0.2cm，緊貼「了解詳情」（≈ max(0, 0.15−0.2) cm）
+  static const double _compactCardBottomEdgePx = 0.0;
+  /// 標題與活動圖之間（題述圖向下 0.2cm）
+  static const double _compactTitleToImageGapPx = 0.2 * _cmLogicalPx;
+  /// 圖與價錢間緊貼
+  static const double _compactImageToPriceGapPx = 4.0;
+  /// 0.2cm 邏輯像素（價錢字級加量等）
+  static const double _pointTwoCmLogicalPx = 0.2 * _cmLogicalPx;
   static const double _activitySpacingHalfCmPx = _halfCmLogicalPx;
-  static const double _mobileBoxWidthCm = 4;
-  static const double _mobileBoxHeightCm = 4.5;
-  static const double _mobileBoxWidthPx = _mobileBoxWidthCm * _cmLogicalPx;
-  static const double _mobileBoxHeightPx = _mobileBoxHeightCm * _cmLogicalPx;
+  /// 手機緊湊卡左右內距（須與 [_buildActivityCard] compact 一致）
+  static const double _compactCardHorizontalPadPx = 6.0;
+  /// 僅手機格狀卡用，避免標題字過大佔滿高度。
+  static const double _mobileCardTitleFontSize = 14.5;
+  /// 預留兩行標題高度（與標題 [Text] height 1.15 對齊）
+  static const double _compactTitleMaxLinesHeightPx =
+      _mobileCardTitleFontSize * 1.15 * 2;
+  /// 原字級 + 0.2cm（與示意「價錢放大」一致）
+  static const double _mobileCardPriceFontSize =
+      13.5 + _pointTwoCmLogicalPx;
+  static const double _wideCardPriceFontSize = 16 + _pointTwoCmLogicalPx;
 
-  /// Grid `childAspectRatio` = 寬／高（寬 4cm、高 4.5cm）
-  static const double _mobileGridAspectRatio =
-      _mobileBoxWidthPx / _mobileBoxHeightPx;
+  /// 價錢兩行預留（與 compact 卡 [fixedNoImage] 內 [compactPriceBlockMinPx] 一致）
+  static const double _compactPriceBlockMinPx = 22.0;
+  static const double _compactGapBeforeDetailButtonPx = 6.0;
 
-  /// 手機活動字體：基礎約 10；「增大 1cm」以 1cm≈38 邏輯像素取 38/3 加於標題（其餘按比例），格內 FittedBox 防溢出
+  /// 「了解詳情」按鈕字級用 [ _mobileFontBump1Cm ]。
   static const double _mobileFontBump1Cm = 38 / 3;
-  static const double _mobileTitleFontSize = 10 + _mobileFontBump1Cm;
-  static const double _mobilePriceFontSize = 10 + _mobileFontBump1Cm * 0.78;
+
+  /// 「了解詳情」按鈕整體縮小 20%，並相對原位置下移 0.5cm（見下方 [SizedBox]）。
+  static const double _detailButtonScale = 0.8;
 
   /// 「了解詳情」字體：加大以避免手機卡片內文字過細。
   static const double _mobileDetailButtonFontSize =
-      10 + _mobileFontBump1Cm * 0.72;
+      (10 + _mobileFontBump1Cm * 0.72) * _detailButtonScale;
 
-  /// 按鈕高度放大 40%，令「了解詳情」文字更清楚。
-  static const double _mobileDetailButtonHeightPx = 36 * 1.4;
+  /// 按鈕高度放大 40% 後再縮小 20%。
+  static const double _mobileDetailButtonHeightPx =
+      36 * 1.4 * _detailButtonScale;
+
+  /// 緊湊卡除「正方形圖」以外之固定高度；須與 [_buildActivityCard] compact 內計算一致。
+  static double get _compactCellFixedNoImagePx =>
+      _compactCardTopEdgePx +
+      _compactCardBottomEdgePx +
+      _compactTitleMaxLinesHeightPx +
+      _compactTitleToImageGapPx +
+      _compactImageToPriceGapPx +
+      _compactPriceBlockMinPx +
+      _compactGapBeforeDetailButtonPx +
+      _mobileDetailButtonHeightPx;
+
+  /// 手機格線寬／高比後備（異常窄螢幕時避免除零）
+  static const double _mobileGridAspectRatioFallback = 4 / 6.85;
 
   /// 「了解詳情」按鈕加闊 40%（若超出卡片可用寬度則取上限）。
   static const double _detailButtonWidthMultiplier = 1.4;
 
-  /// 寬螢幕「了解詳情」字體同步加大。
-  static const double _wideDetailButtonFontSize = 18 * 1.2;
+  /// 寬螢幕「了解詳情」字體同步加大（含縮小 20%）。
+  static const double _wideDetailButtonFontSize =
+      18 * 1.2 * _detailButtonScale;
 
   /// 標題衍生漸層＋可選後台上傳圖（載入失敗時仍顯示漸層）。
   Widget _activityHeroBackground(_ActivityItem item) {
-    final url = item.imageUrl.trim();
+    final url = item.resolvedListImageUrl;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -508,8 +522,8 @@ class _ActivityPageState extends State<ActivityPage> {
   }
 
   void _openActivityDetail(BuildContext context, _ActivityItem item) {
-    final img = item.imageUrl.trim();
     final poster = item.registrationPosterUrl?.trim();
+    final resolved = item.resolvedListImageUrl;
     showActivityDetailRegistrationSheet(
       context,
       activityId: item.id,
@@ -517,10 +531,11 @@ class _ActivityPageState extends State<ActivityPage> {
       unitPriceDisplay: item.price,
       activityDetail: item.activityDetail,
       bodyText: item.bodyText ?? item.subtitle,
-      activityImageUrl: img.isNotEmpty ? img : null,
+      activityImageUrl: resolved.isNotEmpty ? resolved : null,
       registrationPosterUrl:
           poster != null && poster.isNotEmpty ? poster : null,
       maxParticipants: item.maxParticipants,
+      activityDateOptions: item.activityDateOptions,
     );
   }
 
@@ -528,139 +543,132 @@ class _ActivityPageState extends State<ActivityPage> {
     BuildContext context,
     _ActivityItem item, {
     required bool compact,
-    double? cellWidth,
   }) {
     if (compact) {
-      final cw = cellWidth ?? _mobileBoxWidthPx;
-      final w = math.min(cw, _mobileBoxWidthPx);
-      final h = w * (_mobileBoxHeightPx / _mobileBoxWidthPx);
-      return Center(
-        child: Material(
-          elevation: 2,
-          borderRadius: BorderRadius.circular(10),
-          clipBehavior: Clip.antiAlias,
-          child: SizedBox(
-            width: w,
-            height: h,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                _activityHeroBackground(item),
-                Positioned.fill(
-                  child: Container(
-                    color: Colors.black.withOpacity(0.28),
-                  ),
+      /// 必須與 [GridView] 配發的格線寬高一致；圖邊長依格高扣除標題／價／按鈕預留，避免溢出與過大留白。
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final cellW = constraints.maxWidth;
+          final cellH = constraints.maxHeight;
+          const horizontalPad = 6.0;
+          final contentW = (cellW - horizontalPad * 2).clamp(0.0, double.infinity);
+          /// 價錢兩行＋按鈕區（略大於字級以留安全像素）
+          const compactPriceBlockMinPx = 22.0;
+          const gapBeforeDetailButtonPx = 6.0;
+          const fixedNoImage = _compactCardTopEdgePx + _compactCardBottomEdgePx +
+              _compactTitleMaxLinesHeightPx +
+              _compactTitleToImageGapPx +
+              _compactImageToPriceGapPx +
+              compactPriceBlockMinPx +
+              gapBeforeDetailButtonPx +
+              _mobileDetailButtonHeightPx;
+          final imageSide = math.min(
+            contentW,
+            math.max(0.0, cellH - fixedNoImage),
+          );
+          return Material(
+            color: Colors.white,
+            elevation: 2,
+            borderRadius: BorderRadius.circular(10),
+            clipBehavior: Clip.antiAlias,
+            child: SizedBox(
+              width: cellW,
+              height: cellH,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  _compactCardHorizontalPadPx,
+                  _compactCardTopEdgePx,
+                  _compactCardHorizontalPadPx,
+                  _compactCardBottomEdgePx,
                 ),
-                Positioned.fill(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      6,
-                      _halfCmLogicalPx,
-                      6,
-                      _halfCmLogicalPx,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFF333333),
+                        fontSize: _mobileCardTitleFontSize,
+                        fontWeight: FontWeight.w600,
+                        height: 1.15,
+                      ),
                     ),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.topCenter,
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.topCenter,
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(maxWidth: w - 12),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      item.title,
-                                      maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: _mobileTitleFontSize,
-                                        fontWeight: FontWeight.w600,
-                                        height: 1.2,
-                                        shadows: [
-                                          Shadow(
-                                            color: Colors.black54,
-                                            blurRadius: 4,
-                                            offset: Offset(0, 1),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      item.price,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        fontSize: _mobilePriceFontSize,
-                                        color: AppConstants.primaryColor,
-                                        fontWeight: FontWeight.w600,
-                                        shadows: [
-                                          Shadow(
-                                            color: Colors.black45,
-                                            blurRadius: 3,
-                                            offset: Offset(0, 1),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                    SizedBox(height: _compactTitleToImageGapPx),
+                    Center(
+                      child: SizedBox(
+                        width: imageSide,
+                        height: imageSide,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: _activityHeroBackground(item),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: _compactImageToPriceGapPx),
+                    Text(
+                      item.price,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: _mobileCardPriceFontSize,
+                        color: AppConstants.primaryColor,
+                        fontWeight: FontWeight.w600,
+                        height: 1.0,
+                      ),
+                    ),
+                    SizedBox(height: _compactGapBeforeDetailButtonPx),
+                    Center(
+                      child: SizedBox(
+                        width: math.min(
+                          contentW,
+                          math.max(100.0, contentW * 0.88) *
+                              _detailButtonWidthMultiplier *
+                              _detailButtonScale,
+                        ),
+                        height: _mobileDetailButtonHeightPx,
+                        child: ElevatedButton(
+                          onPressed: () =>
+                              _openActivityDetail(context, item),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppConstants.primaryColor,
+                            foregroundColor: Colors.white,
+                            elevation: 1,
+                            shadowColor: Colors.black26,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 6,
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: const Text(
+                              '了解詳情',
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontSize: _mobileDetailButtonFontSize,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
                         ),
-                        SizedBox(
-                          width: math.min(
-                            w - 12,
-                            math.max(100.0, w * 0.88) *
-                                _detailButtonWidthMultiplier,
-                          ),
-                          height: _mobileDetailButtonHeightPx,
-                          child: ElevatedButton(
-                            onPressed: () => _openActivityDetail(context, item),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppConstants.primaryColor,
-                              foregroundColor: Colors.white,
-                              elevation: 2,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 6,
-                              ),
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: const Text(
-                                '了解詳情',
-                                maxLines: 1,
-                                style: TextStyle(
-                                  fontSize: _mobileDetailButtonFontSize,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       );
     }
 
@@ -670,15 +678,27 @@ class _ActivityPageState extends State<ActivityPage> {
         elevation: 2,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(height: _imageTopGap1cmPx),
-            SizedBox(
-              height: _imageSizePx,
-              width: double.infinity,
-              child: Center(
+        clipBehavior: Clip.antiAlias,
+        color: Colors.white,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(10, 10, 10, _detailBottomGap1cmPx),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                item.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF333333),
+                  height: 1.0,
+                ),
+              ),
+              Center(
                 child: SizedBox(
                   width: _imageSizePx,
                   height: _imageSizePx,
@@ -688,71 +708,51 @@ class _ActivityPageState extends State<ActivityPage> {
                   ),
                 ),
               ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(10, 0, 10, _detailBottomGap1cmPx),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(height: _cardGapPx),
-                  Text(
-                    item.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: _cardGapPx),
-                  Text(
-                    _activityCardPriceLine(item),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 16,
+              Text(
+                _activityCardPriceLine(item),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: _wideCardPriceFontSize,
+                  color: AppConstants.primaryColor,
+                  fontWeight: FontWeight.w600,
+                  height: 1.0,
+                ),
+              ),
+              SizedBox(
+                width: double.infinity,
+                height: _mobileDetailButtonHeightPx,
+                child: OutlinedButton(
+                  onPressed: () => _openActivityDetail(context, item),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppConstants.primaryColor,
+                    side: const BorderSide(
                       color: AppConstants.primaryColor,
-                      fontWeight: FontWeight.w600,
+                      width: 2,
                     ),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 22,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  SizedBox(height: _cardGapPx),
-                  SizedBox(
-                    width: double.infinity,
-                    height: _mobileDetailButtonHeightPx,
-                    child: FractionallySizedBox(
-                      widthFactor: 1.0,
-                      child: OutlinedButton(
-                        onPressed: () => _openActivityDetail(context, item),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppConstants.primaryColor,
-                          side: const BorderSide(
-                              color: AppConstants.primaryColor, width: 2),
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 8, horizontal: 22),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: const Text(
-                            '了解詳情',
-                            maxLines: 1,
-                            style: TextStyle(
-                              fontSize: _wideDetailButtonFontSize,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: const Text(
+                      '了解詳情',
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: _wideDetailButtonFontSize,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

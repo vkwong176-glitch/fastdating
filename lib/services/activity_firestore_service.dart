@@ -40,6 +40,7 @@ class ActivityFirestoreService {
     int maxParticipants = 10,
     String activityDetail = '',
     String registrationPosterUrl = '',
+    List<String> activityDateOptions = const [],
   }) async {
     if (!FirebaseBootstrap.isReady) {
       throw StateError('activity_firestore_bootstrap_not_ready');
@@ -76,6 +77,10 @@ class ActivityFirestoreService {
     final pm = paymentMethod.trim();
     final cap = maxParticipants.clamp(1, 10);
     final detailTrim = activityDetail.trim();
+    final dateOpts = activityDateOptions
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
     await upsertActivity(
       id: docId,
       data: {
@@ -92,6 +97,8 @@ class ActivityFirestoreService {
           'registrationPosterUrl': posterTrim
         else
           'registrationPosterUrl': FieldValue.delete(),
+        'activityDateOptions':
+            dateOpts.isNotEmpty ? dateOpts : FieldValue.delete(),
       },
     );
   }

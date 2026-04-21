@@ -9,6 +9,22 @@ import '../services/payment_settings_service.dart';
 import '../services/subscription_order_service.dart';
 import '../utils/constants.dart';
 
+/// 與訂閱頁「N 個月 · 金額」行一致：避免 [totalPrice] 已含 `HKD$` 時顯示成 `HKD$HKD$`。
+String manualCheckoutPlanPriceLine(String months, String totalPrice) {
+  var t = totalPrice.trim();
+  while (t.contains('HKD\$HKD\$')) {
+    t = t.replaceFirst('HKD\$HKD\$', 'HKD\$');
+  }
+  if (!t.startsWith('HKD\$')) {
+    if (t.startsWith(r'$')) {
+      t = 'HKD$t';
+    } else {
+      t = 'HKD\$$t';
+    }
+  }
+  return '$months 個月 · $t';
+}
+
 /// 與訂閱頁手動轉帳彈窗相同：FPS／WeChat／銀行、WhatsApp、提交建立 [subscription_orders]。
 Future<void> showManualPaymentCheckoutSheet(
   BuildContext context, {
@@ -147,7 +163,7 @@ Future<void> showManualPaymentCheckoutSheet(
                               ),
                             ),
                             Text(
-                              '$months 個月 · HKD\$$totalPrice',
+                              manualCheckoutPlanPriceLine(months, totalPrice),
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,

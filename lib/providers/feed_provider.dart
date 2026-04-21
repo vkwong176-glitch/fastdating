@@ -13,6 +13,7 @@ class FeedProvider with ChangeNotifier {
   List<UserPostItem> _remotePosts = [];
   final List<UserPostItem> _localOnlyPosts = [];
   StreamSubscription<List<UserPostItem>>? _sub;
+  StreamSubscription<List<UserPostItem>>? _subAdPromotions;
   Timer? _ttlUiTick;
   int _ttlMinuteTick = 0;
 
@@ -20,13 +21,52 @@ class FeedProvider with ChangeNotifier {
     _bindRemote();
   }
 
+  static int _comparePostsByCreatedAtDesc(UserPostItem a, UserPostItem b) {
+    final ta =
+        a.createdAtUtc ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+    final tb =
+        b.createdAtUtc ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+    return tb.compareTo(ta);
+  }
+
+  void _mergeRemoteFromFeeds({
+    required List<UserPostItem> general,
+    required List<UserPostItem> adOnly,
+  }) {
+    final byId = <String, UserPostItem>{};
+    for (final p in general) {
+      byId[p.id] = p;
+    }
+    for (final p in adOnly) {
+      byId[p.id] = p;
+    }
+    final merged = byId.values.toList()..sort(_comparePostsByCreatedAtDesc);
+    _remotePosts = merged;
+    notifyListeners();
+  }
+
   void _bindRemote() {
     if (!FirebaseBootstrap.isReady) return;
     _sub?.cancel();
+    _subAdPromotions?.cancel();
+    var lastGeneral = <UserPostItem>[];
+    var lastAdOnly = <UserPostItem>[];
+    void onChunk() {
+      _mergeRemoteFromFeeds(general: lastGeneral, adOnly: lastAdOnly);
+    }
+
     _sub = FeedFirestoreService.instance.watchPublicPosts().listen(
       (posts) {
-        _remotePosts = posts;
-        notifyListeners();
+        lastGeneral = posts;
+        onChunk();
+      },
+      onError: (_) {},
+    );
+    _subAdPromotions =
+        FeedFirestoreService.instance.watchActiveAdPromotionPosts().listen(
+      (posts) {
+        lastAdOnly = posts;
+        onChunk();
       },
       onError: (_) {},
     );
@@ -45,7 +85,8 @@ class FeedProvider with ChangeNotifier {
     });
   }
 
-  /// 遠端（新在前）＋本機僅供未登入示範（不含反邀約系統貼文）；僅顯示 [FeedFirestoreService.publicFeedRetention] 內之貼文。
+  /// 遠端（新在前）＝依建立時間新到舊之貼文 **與** 發佈中宣傳貼文合併去重；
+  /// 並含本機僅供未登入示範（不含反邀約系統貼文）；一般會員貼文僅顯示 [FeedFirestoreService.publicFeedRetention] 內者。
   List<UserPostItem> get userPosts => List.unmodifiable([
         ..._remotePosts,
         ..._localOnlyPosts,
@@ -95,6 +136,7 @@ class FeedProvider with ChangeNotifier {
   @override
   void dispose() {
     _sub?.cancel();
+    _subAdPromotions?.cancel();
     _ttlUiTick?.cancel();
     super.dispose();
   }

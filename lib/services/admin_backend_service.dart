@@ -866,6 +866,7 @@ class AdminBackendService {
     int maxParticipants = 10,
     String activityDetail = '',
     String registrationPosterUrl = '',
+    List<String> activityDateOptions = const [],
   }) async {
     if (!_ok) return (wrote: false, frontendSyncError: null);
     final ref = docId != null && docId.isNotEmpty
@@ -875,6 +876,10 @@ class AdminBackendService {
     final cap = maxParticipants.clamp(1, 10);
     final detailTrim = activityDetail.trim();
     final posterTrim = registrationPosterUrl.trim();
+    final dateOpts = activityDateOptions
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
     var mergedImageUrls = List<String>.from(imageUrls);
     if (posterTrim.isNotEmpty &&
         mergedImageUrls.every((e) => e.trim() != posterTrim)) {
@@ -891,6 +896,10 @@ class AdminBackendService {
       'maxParticipants': cap,
       'activityDetail':
           detailTrim.isNotEmpty ? detailTrim : FieldValue.delete(),
+      if (dateOpts.isNotEmpty)
+        'activityDateOptions': dateOpts
+      else
+        'activityDateOptions': FieldValue.delete(),
       'updatedAt': FieldValue.serverTimestamp(),
       if (posterTrim.isNotEmpty)
         'registrationPosterUrl': posterTrim
@@ -913,6 +922,7 @@ class AdminBackendService {
         maxParticipants: cap,
         activityDetail: detailTrim,
         registrationPosterUrl: posterTrim,
+        activityDateOptions: dateOpts,
       );
     } catch (e, st) {
       debugPrint('saveEventCms syncFromEventCms (activities mirror): $e\n$st');

@@ -53,6 +53,7 @@ Future<void> showActivityDetailRegistrationSheet(
   String? activityImageUrl,
   String? registrationPosterUrl,
   int maxParticipants = 10,
+  List<String> activityDateOptions = const [],
 }) async {
   final lang = Provider.of<LanguageProvider>(hostContext, listen: false);
 
@@ -74,6 +75,7 @@ Future<void> showActivityDetailRegistrationSheet(
     activityImageUrl: activityImageUrl,
     registrationPosterUrl: registrationPosterUrl,
     maxParticipants: cap,
+    activityDateOptions: activityDateOptions,
     lang: lang,
   );
 
@@ -159,6 +161,7 @@ class _ActivityRegistrationBody extends StatefulWidget {
     required this.activityImageUrl,
     required this.registrationPosterUrl,
     required this.maxParticipants,
+    required this.activityDateOptions,
     required this.lang,
   });
 
@@ -179,6 +182,10 @@ class _ActivityRegistrationBody extends StatefulWidget {
 
   /// 後台設定的報名人數上限（1–10）
   final int maxParticipants;
+
+  /// 後台填寫之多個活動日期文案，供橫向滑動選擇
+  final List<String> activityDateOptions;
+
   final LanguageProvider lang;
 
   @override
@@ -188,8 +195,14 @@ class _ActivityRegistrationBody extends StatefulWidget {
 
 class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
   int _participants = 1;
+  int _selectedDateIndex = 0;
 
   int get _cap => widget.maxParticipants.clamp(1, 10);
+
+  List<String> get _dateOptions => widget.activityDateOptions
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty)
+      .toList();
 
   @override
   void didUpdateWidget(covariant _ActivityRegistrationBody oldWidget) {
@@ -197,6 +210,14 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
     if (oldWidget.maxParticipants != widget.maxParticipants &&
         _participants > _cap) {
       setState(() => _participants = _cap);
+    }
+    if (oldWidget.activityDateOptions != widget.activityDateOptions) {
+      final n = _dateOptions.length;
+      if (n == 0) {
+        _selectedDateIndex = 0;
+      } else if (_selectedDateIndex >= n) {
+        setState(() => _selectedDateIndex = 0);
+      }
     }
   }
 
@@ -217,12 +238,29 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
         _participants,
       );
 
-  String get _summary => _activitySummarySnippet(
+  String get _summaryBody => _activitySummarySnippet(
         (widget.activityDetail != null &&
                 widget.activityDetail!.trim().isNotEmpty)
             ? widget.activityDetail
             : widget.bodyText,
       );
+
+  String get _summaryForOrder {
+    final dates = _dateOptions;
+    if (dates.isEmpty) return _summaryBody;
+    final idx = _selectedDateIndex.clamp(0, dates.length - 1);
+    final line =
+        '${widget.lang.getString('activity_reg_event_date')}: ${dates[idx]}\n';
+    final rest = _summaryBody;
+    return rest.isEmpty ? line.trim() : '$line$rest';
+  }
+
+  String get _titleWithOptionalDateForWhatsApp {
+    final dates = _dateOptions;
+    if (dates.isEmpty) return widget.title;
+    final idx = _selectedDateIndex.clamp(0, dates.length - 1);
+    return '${widget.title}（${widget.lang.getString('activity_reg_event_date')}: ${dates[idx]}）';
+  }
 
   String get _displayDetailParagraph {
     final d = widget.activityDetail?.trim() ?? '';
@@ -239,45 +277,89 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
     return null;
   }
 
-  Widget _registrationSheetThumb(String url) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            enableFeedback: false,
-            onTap: () => _showActivityPosterZoomDialog(context, url),
-            borderRadius: BorderRadius.circular(8),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: StorageNetworkImage(
-                url: url,
-                width: 96,
-                height: 96,
-                fit: BoxFit.cover,
-                borderRadius: 8,
+  Widget _fullWidthEventImage(String url) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final h = (w * 0.56).clamp(160.0, 300.0);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                enableFeedback: false,
+                onTap: () => _showActivityPosterZoomDialog(context, url),
+                borderRadius: BorderRadius.circular(10),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: SizedBox(
+                    width: w,
+                    height: h,
+                    child: StorageNetworkImage(
+                      url: url,
+                      width: w,
+                      height: h,
+                      fit: BoxFit.cover,
+                      borderRadius: 10,
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          '按圖放大',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF1E88E5),
-          ),
-        ),
-      ],
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: Text(
+                    widget.lang.getString('activity_tap_image_enlarge'),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E88E5),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 4,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.arrow_downward,
+                          color: Colors.red.shade700,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          widget.lang.getString('activity_scroll_down_hint'),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.red.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 
   Future<void> _afterOrderCreated(String paymentMethodCode) async {
     await _pushActivityLocalRecord(
       widget.hostContext,
-      title: widget.title,
+      title: _titleWithOptionalDateForWhatsApp,
       participants: _participants,
       totalPrice: _totalPrice,
       paymentMethodCode: paymentMethodCode,
@@ -288,7 +370,7 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
     if (!_requireMemberLogin()) return;
     final lang = widget.lang;
     final planLabel =
-        '${widget.title}（${lang.getString('activity_reg_headcount')}$_participants）';
+        '$_titleWithOptionalDateForWhatsApp（${lang.getString('activity_reg_headcount')}$_participants）';
     Navigator.pop(context);
     await showManualPaymentCheckoutSheet(
       widget.hostContext,
@@ -298,13 +380,13 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
       purchaseKind: SubscriptionOrderService.purchaseKindActivityRegistration,
       successSnackBar: lang.getString('activity_order_manual_snackbar'),
       whatsappPrefillOverride:
-          '${lang.getString('activity_whatsapp_prefill')}${widget.title} $_participants${lang.getString('activity_whatsapp_prefill_tail')}$_totalPrice',
+          '${lang.getString('activity_whatsapp_prefill')}$_titleWithOptionalDateForWhatsApp $_participants${lang.getString('activity_whatsapp_prefill_tail')}$_totalPrice',
       activityId: widget.activityId,
-      activitySummary: _summary,
+      activitySummary: _summaryForOrder,
       onOrderSubmitted: () {
         _pushActivityLocalRecord(
           widget.hostContext,
-          title: widget.title,
+          title: _titleWithOptionalDateForWhatsApp,
           participants: _participants,
           totalPrice: _totalPrice,
           paymentMethodCode: 'manual_fps_wechat_bank',
@@ -319,14 +401,14 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
         await StoreIapService.instance.isAvailable();
     if (!supported) {
       final orderId = await SubscriptionOrderService.recordOrder(
-        planName: widget.title,
+        planName: _titleWithOptionalDateForWhatsApp,
         months: '$_participants',
         totalPrice: _totalPrice,
         paymentMethod: kIsWeb ? 'iap_unavailable_web' : 'iap_unavailable',
         purchaseKind: SubscriptionOrderService.purchaseKindActivityRegistration,
         status: 'demo_local',
         activityId: widget.activityId,
-        activitySummary: _summary,
+        activitySummary: _summaryForOrder,
       );
       if (orderId != null) {
         await _afterOrderCreated(
@@ -380,12 +462,25 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
                     ),
                   ),
                 ),
-                if (_imageForRight != null) ...[
-                  const SizedBox(width: 10),
-                  _registrationSheetThumb(_imageForRight!),
-                ],
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    lang.getString('activity_scroll_pay_banner'),
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.red,
+                      height: 1.25,
+                    ),
+                  ),
+                ),
               ],
             ),
+            if (_imageForRight != null) ...[
+              const SizedBox(height: 12),
+              _fullWidthEventImage(_imageForRight!),
+            ],
             if (_displayDetailParagraph.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
@@ -415,17 +510,87 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
                 color: AppConstants.primaryColor,
               ),
             ),
+            if (_dateOptions.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      lang.getString('activity_reg_pick_event_date'),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: Color(0xFF333333),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      lang.getString('activity_reg_swipe_right_select_gt'),
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red,
+                        height: 1.25,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 44,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: _dateOptions.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, i) {
+                    final sel = _selectedDateIndex == i;
+                    return ChoiceChip(
+                      label: Text(
+                        _dateOptions[i],
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      selected: sel,
+                      onSelected: (_) =>
+                          setState(() => _selectedDateIndex = i),
+                    );
+                  },
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Text(
                     lang.getString('activity_reg_headcount'),
                     style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 15),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: Color(0xFF333333),
+                    ),
                   ),
                 ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    lang.getString('activity_reg_swipe_right_select'),
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.red,
+                      height: 1.25,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Text(
                   '$_participants',
                   style: TextStyle(
@@ -479,13 +644,50 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
                 }
                 if (ps.enableManual) {
                   tiles.add(
-                    ListTile(
-                      leading:
-                          const Icon(Icons.account_balance_wallet_outlined),
-                      title: Text(lang.getString('pay_choice_manual')),
-                      subtitle:
-                          Text(lang.getString('subscription_manual_subtitle')),
-                      onTap: _openManualTransfer,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _openManualTransfer,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFFE0B2),
+                              foregroundColor: Colors.black87,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 14,
+                                horizontal: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: Text(
+                              lang.getString('pay_choice_manual'),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          lang.getString('activity_payment_tap_hint'),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.red,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 }

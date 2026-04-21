@@ -1673,55 +1673,55 @@ List<DocumentSnapshot<Map<String, dynamic>>>
 
 /// 廣告審批頁：已合併之 [users] 列表（不含訂單付款區塊）。
 Widget _adCoopApprovalMergedListBody(
-    BuildContext context,
-    LanguageProvider lang,
-    AdminBackendService svc,
-    List<DocumentSnapshot<Map<String, dynamic>>> merged,
+  BuildContext context,
+  LanguageProvider lang,
+  AdminBackendService svc,
+  List<DocumentSnapshot<Map<String, dynamic>>> merged,
     {bool showEmptyState = true,
     bool wrapWithScrollView = true}) {
   final body = Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
       if (merged.isEmpty && showEmptyState)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(lang.getString('admin_sec_empty')),
-        ),
-      if (merged.isNotEmpty) ...[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Text(
-            lang.getString('admin_sec_ad_approval_records_section'),
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              height: 1.25,
-            ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(lang.getString('admin_sec_empty')),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: AdminPagedGenericFrame<DocumentSnapshot<Map<String, dynamic>>>(
-            expand: false,
-            shrinkWrap: true,
-            items: merged,
-            itemBuilder: (context, index, d) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _adminStandaloneAdCoopCard(
-                context,
-                lang,
-                svc,
-                d,
-                showAdPostContentBlock: true,
-                adPostContentUseInline: true,
-                showAdCoopReviewControls: true,
-                useAdPublicationSectionHeading: true,
+        if (merged.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              lang.getString('admin_sec_ad_approval_records_section'),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                height: 1.25,
               ),
             ),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: AdminPagedGenericFrame<DocumentSnapshot<Map<String, dynamic>>>(
+              expand: false,
+              shrinkWrap: true,
+              items: merged,
+              itemBuilder: (context, index, d) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _adminStandaloneAdCoopCard(
+                  context,
+                  lang,
+                  svc,
+                  d,
+                  showAdPostContentBlock: true,
+                  adPostContentUseInline: true,
+                  showAdCoopReviewControls: true,
+                  useAdPublicationSectionHeading: true,
+                ),
+              ),
+            ),
+          ),
+        ],
       ],
-    ],
   );
   if (!wrapWithScrollView) return body;
   return SingleChildScrollView(
@@ -1915,7 +1915,7 @@ Widget _buildAdCoopPostContentMemberStyle(
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(8),
-                ),
+                  ),
                 child: Icon(Icons.image_not_supported, color: Colors.grey[500]),
               ),
       ),
@@ -2264,60 +2264,60 @@ Widget _adminStandaloneAdCoopCard(
                       .toList(),
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {
-                          if (linkedOrderId.isNotEmpty) {
-                            _submitAdCoopContentApprove(
-                              context,
-                              lang,
-                              svc,
-                              linkedOrderId,
-                              uid,
-                            );
-                          } else {
-                            _submitAdCoopStandaloneApprove(
-                              context,
-                              lang,
-                              svc,
-                              uid,
-                            );
-                          }
-                        },
-                        child: Text(lang.getString('admin_ad_coop_pass')),
-                      ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      if (linkedOrderId.isNotEmpty) {
+                        _submitAdCoopContentApprove(
+                          context,
+                          lang,
+                          svc,
+                          linkedOrderId,
+                          uid,
+                        );
+                      } else {
+                        _submitAdCoopStandaloneApprove(
+                          context,
+                          lang,
+                          svc,
+                          uid,
+                        );
+                      }
+                    },
+                    child: Text(lang.getString('admin_ad_coop_pass')),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.deepOrange[800],
+                      side: BorderSide(color: Colors.deepOrange.shade400),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.deepOrange[800],
-                          side: BorderSide(color: Colors.deepOrange.shade400),
-                        ),
-                        onPressed: () {
-                          if (linkedOrderId.isNotEmpty) {
-                            _submitAdCoopContentIssue(
-                              context,
-                              lang,
-                              svc,
-                              linkedOrderId,
-                              uid,
-                            );
-                          } else {
-                            _submitAdCoopStandaloneIssue(
-                              context,
-                              lang,
-                              svc,
-                              uid,
-                            );
-                          }
-                        },
-                        child: Text(lang.getString('admin_ad_coop_issue')),
-                      ),
-                    ),
+                    onPressed: () {
+                      if (linkedOrderId.isNotEmpty) {
+                        _submitAdCoopContentIssue(
+                          context,
+                          lang,
+                          svc,
+                          linkedOrderId,
+                          uid,
+                        );
+                      } else {
+                        _submitAdCoopStandaloneIssue(
+                          context,
+                          lang,
+                          svc,
+                          uid,
+                        );
+                      }
+                    },
+                    child: Text(lang.getString('admin_ad_coop_issue')),
+                  ),
+                ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -2364,24 +2364,24 @@ Widget _adminStandaloneAdCoopCard(
                         child: const Text('暫停'),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red[800],
-                          side: BorderSide(color: Colors.red.shade400),
-                        ),
-                        onPressed: () => _confirmDeleteAdCoopSubmission(
-                          context,
-                          lang,
-                          svc,
-                          memberUid: uid,
-                          hasLinkedOrder: linkedOrderId.isNotEmpty,
-                          orderDocId:
-                              linkedOrderId.isEmpty ? null : linkedOrderId,
-                        ),
-                        child: Text(lang.getString('btn_delete')),
-                      ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red[800],
+                      side: BorderSide(color: Colors.red.shade400),
+                    ),
+                    onPressed: () => _confirmDeleteAdCoopSubmission(
+                      context,
+                      lang,
+                      svc,
+                      memberUid: uid,
+                      hasLinkedOrder: linkedOrderId.isNotEmpty,
+                      orderDocId:
+                          linkedOrderId.isEmpty ? null : linkedOrderId,
+                    ),
+                    child: Text(lang.getString('btn_delete')),
+                  ),
                     ),
                   ],
                 ),
@@ -2453,9 +2453,9 @@ Widget _adminSubscriptionOrderCard(
       ((m['adPostLink'] ?? m['ad_post_link']) ?? '').toString().trim();
   final adImgUrl =
       ((m['adPostImageUrl'] ?? m['adPostImageURL'] ?? m['ad_post_image_url']) ??
-              '')
-          .toString()
-          .trim();
+      '')
+      .toString()
+      .trim();
   final adBody =
       ((m['adPostText'] ?? m['ad_post_text']) ?? '').toString().trim();
 
@@ -2473,8 +2473,8 @@ Widget _adminSubscriptionOrderCard(
     final mirrorTitle = (mirrorSub?['title'] ?? '').toString().trim();
     final mirrorLink = (mirrorSub?['link'] ?? '').toString().trim();
     final mirrorImg = ((mirrorSub?['imageUrl'] ?? mirrorSub?['imageURL']) ?? '')
-        .toString()
-        .trim();
+            .toString()
+            .trim();
     final adTitleDisp = adTitle.isNotEmpty ? adTitle : mirrorTitle;
     final adBodyDisp = adBody.isNotEmpty ? adBody : mirrorText;
     final linkDisp = linkLine.isNotEmpty ? linkLine : mirrorLink;
@@ -2488,158 +2488,158 @@ Widget _adminSubscriptionOrderCard(
     }
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildMemberRegistrationBlock(context, lang, uid),
-            const Divider(height: 20),
-            if (isAd &&
-                (showAdPostContentBlock || showAdCoopReviewControls)) ...[
-              if (showAdPostContentBlock) ...[
-                Text(
-                  lang.getString('ad_post_content_heading'),
+    margin: const EdgeInsets.only(bottom: 12),
+    child: Padding(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildMemberRegistrationBlock(context, lang, uid),
+          const Divider(height: 20),
+          if (isAd &&
+              (showAdPostContentBlock || showAdCoopReviewControls)) ...[
+            if (showAdPostContentBlock) ...[
+              Text(
+                lang.getString('ad_post_content_heading'),
                   style: const TextStyle(
                       fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              if (showAdCoopReviewControls && postedAt != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  '${lang.getString('admin_ad_coop_submitted_at')}: '
+                  '${DateFormat('yyyy/MM/dd HH:mm').format(postedAt)}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                 ),
-                if (showAdCoopReviewControls && postedAt != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    '${lang.getString('admin_ad_coop_submitted_at')}: '
-                    '${DateFormat('yyyy/MM/dd HH:mm').format(postedAt)}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                  ),
-                ],
-                const SizedBox(height: 8),
-                if (adPostContentUseInline)
-                  _buildAdCoopPostContentInline(
-                    context,
-                    lang,
+              ],
+              const SizedBox(height: 8),
+              if (adPostContentUseInline)
+                _buildAdCoopPostContentInline(
+                  context,
+                  lang,
                     adTitle: adTitleDisp,
-                    adText: adBodyDisp,
-                    adLink: linkDisp,
-                    adImageUrl: adImgDisp,
-                    postedAt: postedAt,
-                    showEmptyPlaceholder: !showAdCoopReviewControls,
-                  )
-                else
-                  FilledButton.tonal(
-                    onPressed: uid.isEmpty
-                        ? null
-                        : () => _showAdCoopPostContentViewer(
-                              context,
-                              lang,
-                              memberUid: uid,
+                  adText: adBodyDisp,
+                  adLink: linkDisp,
+                  adImageUrl: adImgDisp,
+                  postedAt: postedAt,
+                  showEmptyPlaceholder: !showAdCoopReviewControls,
+                )
+              else
+                FilledButton.tonal(
+                  onPressed: uid.isEmpty
+                      ? null
+                      : () => _showAdCoopPostContentViewer(
+                            context,
+                            lang,
+                            memberUid: uid,
                               adTitle: adTitleDisp,
-                              adText: adBodyDisp,
-                              adLink: linkDisp,
-                              adImageUrl: adImgDisp,
-                              postedAt: postedAt,
-                            ),
+                            adText: adBodyDisp,
+                            adLink: linkDisp,
+                            adImageUrl: adImgDisp,
+                            postedAt: postedAt,
+                          ),
                     child:
                         Text(lang.getString('admin_ad_coop_view_content_btn')),
-                  ),
-              ],
-              if (showAdCoopReviewControls) ...[
-                const SizedBox(height: 8),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _adminAdCoopReviewStatusLine(lang, m),
+                ),
+            ],
+            if (showAdCoopReviewControls) ...[
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      _adminAdCoopReviewStatusLine(lang, m),
                         style: const TextStyle(
                             fontSize: 13, fontWeight: FontWeight.w600),
-                      ),
                     ),
-                  ],
-                ),
-                if (reviewSt ==
-                        AdminBackendService.adContentReviewNeedsRevision &&
-                    reviewNote.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    reviewNote,
-                    style: TextStyle(
-                        fontSize: 13, color: Colors.orange[900], height: 1.35),
                   ),
                 ],
-                const SizedBox(height: 10),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: uid.isEmpty
-                            ? null
-                            : () => _submitAdCoopContentApprove(
-                                  context,
-                                  lang,
-                                  svc,
-                                  d.id,
-                                  uid,
-                                ),
-                        child: Text(lang.getString('admin_ad_coop_pass')),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.deepOrange[800],
-                          side: BorderSide(color: Colors.deepOrange.shade400),
-                        ),
-                        onPressed: uid.isEmpty
-                            ? null
-                            : () => _submitAdCoopContentIssue(
-                                  context,
-                                  lang,
-                                  svc,
-                                  d.id,
-                                  uid,
-                                ),
-                        child: Text(lang.getString('admin_ad_coop_issue')),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red[800],
-                          side: BorderSide(color: Colors.red.shade400),
-                        ),
-                        onPressed: uid.isEmpty
-                            ? null
-                            : () => _confirmDeleteAdCoopSubmission(
-                                  context,
-                                  lang,
-                                  svc,
-                                  memberUid: uid,
-                                  hasLinkedOrder: true,
-                                  orderDocId: d.id,
-                                ),
-                        child: Text(lang.getString('btn_delete')),
-                      ),
-                    ),
-                  ],
+              ),
+                if (reviewSt ==
+                        AdminBackendService.adContentReviewNeedsRevision &&
+                  reviewNote.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  reviewNote,
+                    style: TextStyle(
+                        fontSize: 13, color: Colors.orange[900], height: 1.35),
                 ),
               ],
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: uid.isEmpty
+                          ? null
+                          : () => _submitAdCoopContentApprove(
+                                context,
+                                lang,
+                                svc,
+                                d.id,
+                                uid,
+                              ),
+                      child: Text(lang.getString('admin_ad_coop_pass')),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.deepOrange[800],
+                        side: BorderSide(color: Colors.deepOrange.shade400),
+                      ),
+                      onPressed: uid.isEmpty
+                          ? null
+                          : () => _submitAdCoopContentIssue(
+                                context,
+                                lang,
+                                svc,
+                                d.id,
+                                uid,
+                              ),
+                      child: Text(lang.getString('admin_ad_coop_issue')),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red[800],
+                        side: BorderSide(color: Colors.red.shade400),
+                      ),
+                      onPressed: uid.isEmpty
+                          ? null
+                          : () => _confirmDeleteAdCoopSubmission(
+                                context,
+                                lang,
+                                svc,
+                                memberUid: uid,
+                                hasLinkedOrder: true,
+                                orderDocId: d.id,
+                              ),
+                      child: Text(lang.getString('btn_delete')),
+                    ),
+                  ),
+                ],
+              ),
             ],
-            if (!(hideAdOrderPaymentMeta && isAd)) ...[
-              Text(
-                '${lang.getString('admin_sec_c_order_status')}: ${dealDone ? lang.getString('admin_sec_c_deal_done') : lang.getString('admin_sec_c_deal_pending')}',
+            const SizedBox(height: 12),
+          ],
+          if (!(hideAdOrderPaymentMeta && isAd)) ...[
+            Text(
+              '${lang.getString('admin_sec_c_order_status')}: ${dealDone ? lang.getString('admin_sec_c_deal_done') : lang.getString('admin_sec_c_deal_pending')}',
                 style:
                     const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 4),
+            ),
+            const SizedBox(height: 4),
               if (!isAd) ...[
-                Text(
+              Text(
                   '${lang.getString('admin_sec_c_plan')}: $planDetail',
-                  style: const TextStyle(fontSize: 14),
-                ),
+                style: const TextStyle(fontSize: 14),
+              ),
                 const SizedBox(height: 4),
                 Text(
                   '${lang.getString('payment_amount')}: $priceShown',
@@ -2649,33 +2649,33 @@ Widget _adminSubscriptionOrderCard(
                   ),
                 ),
               ],
-              if (isAd) ...[
-                const SizedBox(height: 4),
-                Text(
-                  '${lang.getString('admin_sec_i_months')}: ${(m['months'] ?? '—').toString()}',
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 4),
-                Text(
+            if (isAd) ...[
+              const SizedBox(height: 4),
+              Text(
+                '${lang.getString('admin_sec_i_months')}: ${(m['months'] ?? '—').toString()}',
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 4),
+              Text(
                   '${lang.getString('admin_sec_i_amount')}: $priceShown',
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ],
-              const SizedBox(height: 4),
-              Text(
-                '${lang.getString('admin_sec_c_pay_method')}: $pmLabel',
                 style: const TextStyle(fontSize: 14),
               ),
-              const SizedBox(height: 4),
-              Text(
-                '${lang.getString('admin_sec_c_order_time')}: $timeStr',
-                style: const TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${lang.getString('admin_sec_c_expires')}: $expStr',
-                style: const TextStyle(fontSize: 14),
-              ),
+            ],
+            const SizedBox(height: 4),
+            Text(
+              '${lang.getString('admin_sec_c_pay_method')}: $pmLabel',
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${lang.getString('admin_sec_c_order_time')}: $timeStr',
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${lang.getString('admin_sec_c_expires')}: $expStr',
+              style: const TextStyle(fontSize: 14),
+            ),
               if (_orderHasManualMonthlyBilling(m)) ...[
                 const SizedBox(height: 4),
                 Text(
@@ -2690,26 +2690,26 @@ Widget _adminSubscriptionOrderCard(
                   style: const TextStyle(fontSize: 14),
                 ),
               ],
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Text(
-                    '${lang.getString('admin_sec_c_pay_state')}: ',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(
+                  '${lang.getString('admin_sec_c_pay_state')}: ',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
                   ),
-                  Text(
-                    paidShown
-                        ? lang.getString('admin_sec_c_paid')
-                        : lang.getString('admin_sec_c_unpaid'),
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      color: paidShown ? Colors.green[700] : Colors.orange[800],
-                    ),
+                ),
+                Text(
+                  paidShown
+                      ? lang.getString('admin_sec_c_paid')
+                      : lang.getString('admin_sec_c_unpaid'),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: paidShown ? Colors.green[700] : Colors.orange[800],
                   ),
+                ),
                   const Spacer(),
                   if (!paidShown || canConfirmNextManualCycle) ...[
                     FilledButton.tonal(
@@ -2726,8 +2726,8 @@ Widget _adminSubscriptionOrderCard(
                           vertical: 8,
                         ),
                       ),
-                      child: Text(lang.getString('admin_sec_c_btn_mark_paid')),
-                    ),
+                    child: Text(lang.getString('admin_sec_c_btn_mark_paid')),
+                  ),
                     const SizedBox(width: 8),
                   ],
                   OutlinedButton(
@@ -2748,13 +2748,13 @@ Widget _adminSubscriptionOrderCard(
                     ),
                     child: Text(lang.getString('btn_delete')),
                   ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ],
-        ),
+        ],
       ),
-    );
+    ),
+  );
   }
 
   if (!isAd || uid.isEmpty) {
@@ -3765,6 +3765,7 @@ class _AdminSectionFPageState extends State<AdminSectionFPage> {
     final titleCtrl = TextEditingController();
     var bodyPersisted = '';
     final activityDetailCtrl = TextEditingController();
+    final dateControllers = <TextEditingController>[];
     final priceCtrl = TextEditingController();
     final existingUrls = <String>[];
     var selectedPayment = ActivityCmsPaymentCodes.iapStores;
@@ -3805,7 +3806,20 @@ class _AdminSectionFPageState extends State<AdminSectionFPage> {
         }
         registrationPosterUrl =
             (m['registrationPosterUrl'] ?? '').toString().trim();
+        final rawDates = m['activityDateOptions'];
+        if (rawDates is List) {
+          for (final e in rawDates) {
+            final s = e.toString().trim();
+            if (s.isNotEmpty) {
+              dateControllers.add(TextEditingController(text: s));
+            }
+          }
+        }
       }
+    }
+
+    if (dateControllers.isEmpty) {
+      dateControllers.add(TextEditingController());
     }
 
     if (!context.mounted) return;
@@ -3914,7 +3928,7 @@ class _AdminSectionFPageState extends State<AdminSectionFPage> {
                         alignment: Alignment.center,
                         children: [
                           Container(
-                            height: 160,
+                            height: 240,
                             width: double.infinity,
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
@@ -3930,7 +3944,7 @@ class _AdminSectionFPageState extends State<AdminSectionFPage> {
                                 ? StorageNetworkImage(
                                     url: registrationPosterUrl,
                                     width: double.infinity,
-                                    height: 160,
+                                    height: 240,
                                     fit: BoxFit.contain,
                                     borderRadius: 12,
                                   )
@@ -3942,7 +3956,7 @@ class _AdminSectionFPageState extends State<AdminSectionFPage> {
                           ),
                           if (posterUploadBusy)
                             Container(
-                              height: 160,
+                              height: 240,
                               width: double.infinity,
                               decoration: BoxDecoration(
                                 color: Colors.black.withValues(alpha: 0.35),
@@ -3997,6 +4011,72 @@ class _AdminSectionFPageState extends State<AdminSectionFPage> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      lang.getString('admin_sec_f_activity_dates_title'),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      lang.getString('admin_sec_f_activity_dates_hint'),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...List.generate(dateControllers.length, (index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: dateControllers[index],
+                              decoration: InputDecoration(
+                                hintText: lang.getString(
+                                  'admin_sec_f_activity_date_placeholder',
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                isDense: true,
+                              ),
+                            ),
+                          ),
+                          if (dateControllers.length > 1)
+                            IconButton(
+                              tooltip: lang.getString('btn_delete'),
+                              icon: Icon(Icons.remove_circle_outline,
+                                  color: Colors.grey[700]),
+                              onPressed: () {
+                                setSt(() {
+                                  dateControllers[index].dispose();
+                                  dateControllers.removeAt(index);
+                                });
+                              },
+                            ),
+                        ],
+                      ),
+                    );
+                  }),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () {
+                        setSt(() => dateControllers.add(TextEditingController()));
+                      },
+                      icon: const Icon(Icons.add, size: 20),
+                      label: Text(lang.getString('admin_sec_f_activity_dates_add')),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -4069,6 +4149,7 @@ class _AdminSectionFPageState extends State<AdminSectionFPage> {
         },
       ),
     );
+
     if (ok == true && context.mounted) {
       if (titleCtrl.text.trim().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -4119,6 +4200,10 @@ class _AdminSectionFPageState extends State<AdminSectionFPage> {
           maxParticipants: selectedMaxReg,
           activityDetail: activityDetailCtrl.text,
           registrationPosterUrl: registrationPosterUrl,
+          activityDateOptions: dateControllers
+              .map((c) => c.text.trim())
+              .where((s) => s.isNotEmpty)
+              .toList(),
         );
         if (!context.mounted) return;
         if (!result.wrote) {
@@ -4158,6 +4243,9 @@ class _AdminSectionFPageState extends State<AdminSectionFPage> {
           Navigator.of(context, rootNavigator: true).pop();
         }
       }
+    }
+    for (final c in dateControllers) {
+      c.dispose();
     }
     titleCtrl.dispose();
     activityDetailCtrl.dispose();
@@ -4208,168 +4296,168 @@ class _AdminSectionGPageState extends State<AdminSectionGPage> {
         toolbarHeight: AppConstants.appBarToolbarHeight,
       ),
       body: StreamBuilder<List<EventProposalRecord>>(
-        stream: EventProposalService.watchAllForAdmin(),
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return Center(
-              child: Text(_streamErrorMessage(lang, snap.error)),
-            );
-          }
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final list = snap.data!;
-          if (list.isEmpty) {
-            return Center(child: Text(lang.getString('admin_sec_empty')));
-          }
-          return AdminPagedGenericFrame<EventProposalRecord>(
-            items: list,
-            itemBuilder: (context, i, r) {
-              final email = r.userEmail ?? '—';
-              final detail = [
-                if (r.content.isNotEmpty) r.content,
-                if (r.venue.isNotEmpty)
-                  '${lang.getString('event_venue')}: ${r.venue}',
-                if (r.date.isNotEmpty)
-                  '${lang.getString('event_date')}: ${r.date}',
-                if (r.time.isNotEmpty)
-                  '${lang.getString('event_time')}: ${r.time}',
-                if (r.costPrice.isNotEmpty)
-                  '${lang.getString('event_cost')}: ${r.costPrice}',
-              ].join(' · ');
-              final stColor = _statusColor(r);
-              return Material(
-                color: AppConstants.white,
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
+              stream: EventProposalService.watchAllForAdmin(),
+              builder: (context, snap) {
+                if (snap.hasError) {
+                  return Center(
+                    child: Text(_streamErrorMessage(lang, snap.error)),
+                  );
+                }
+                if (!snap.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final list = snap.data!;
+                if (list.isEmpty) {
+                  return Center(child: Text(lang.getString('admin_sec_empty')));
+                }
+                return AdminPagedGenericFrame<EventProposalRecord>(
+                  items: list,
+                  itemBuilder: (context, i, r) {
+                    final email = r.userEmail ?? '—';
+                    final detail = [
+                      if (r.content.isNotEmpty) r.content,
+                      if (r.venue.isNotEmpty)
+                        '${lang.getString('event_venue')}: ${r.venue}',
+                      if (r.date.isNotEmpty)
+                        '${lang.getString('event_date')}: ${r.date}',
+                      if (r.time.isNotEmpty)
+                        '${lang.getString('event_time')}: ${r.time}',
+                      if (r.costPrice.isNotEmpty)
+                        '${lang.getString('event_cost')}: ${r.costPrice}',
+                    ].join(' · ');
+                    final stColor = _statusColor(r);
+                    return Material(
+                      color: AppConstants.white,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  r.eventName,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 16,
+                                Expanded(
+                                  child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        r.eventName,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        email,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.grey[700],
+                                        ),
+                                      ),
+                                      if (detail.isNotEmpty) ...[
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          detail,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.grey[800],
+                                          ),
+                                        ),
+                                      ],
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        DateFormat('yyyy/MM/dd HH:mm')
+                                            .format(r.createdAt),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  email,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey[700],
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
                                   ),
-                                ),
-                                if (detail.isNotEmpty) ...[
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    detail,
+                                  decoration: BoxDecoration(
+                                    color: stColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: stColor),
+                                  ),
+                                  child: Text(
+                                    _statusLabel(lang, r),
                                     style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey[800],
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: stColor,
                                     ),
-                                  ),
-                                ],
-                                const SizedBox(height: 4),
-                                Text(
-                                  DateFormat('yyyy/MM/dd HH:mm')
-                                      .format(r.createdAt),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: stColor.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: stColor),
-                            ),
-                            child: Text(
-                              _statusLabel(lang, r),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: stColor,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (r.status == EventProposalStatus.pending) ...[
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            TextButton(
-                              onPressed: () async {
-                                await EventProposalService.setAdminStatus(
-                                  r.id,
-                                  EventProposalStatus.rejected,
-                                );
-                                if (context.mounted) {
+                            if (r.status == EventProposalStatus.pending) ...[
+                              const SizedBox(height: 12),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  TextButton(
+                                    onPressed: () async {
+                                      await EventProposalService.setAdminStatus(
+                                        r.id,
+                                        EventProposalStatus.rejected,
+                                      );
+                                      if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        lang.getString(
-                                            'event_proposal_status_rejected'),
-                                      ),
-                                    ),
-                                  );
-                                }
-                              },
+                                          SnackBar(
+                                            content: Text(
+                                              lang.getString(
+                                                  'event_proposal_status_rejected'),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
                               child: Text(lang
                                   .getString('event_proposal_status_rejected')),
-                            ),
-                            const SizedBox(width: 8),
-                            FilledButton(
-                              onPressed: () async {
-                                await EventProposalService.setAdminStatus(
-                                  r.id,
-                                  EventProposalStatus.approved,
-                                );
-                                if (context.mounted) {
+                                  ),
+                                  const SizedBox(width: 8),
+                                  FilledButton(
+                                    onPressed: () async {
+                                      await EventProposalService.setAdminStatus(
+                                        r.id,
+                                        EventProposalStatus.approved,
+                                      );
+                                      if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        lang.getString(
-                                            'event_proposal_status_passed'),
-                                      ),
-                                    ),
-                                  );
-                                }
-                              },
-                              child: Text(
+                                          SnackBar(
+                                            content: Text(
+                                              lang.getString(
+                                                  'event_proposal_status_passed'),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    child: Text(
                                 lang.getString('event_proposal_status_passed'),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
+                            ],
                           ],
                         ),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
     );
   }
 }
@@ -4407,13 +4495,13 @@ class _AdCoopReviewPanel extends StatelessWidget {
       return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: svc.watchSubscriptionOrders(),
         builder: (context, orderSnap) {
+      return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: svc.watchUsersWithStandaloneAdCoopPending(),
+        builder: (context, standSnap) {
           return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: svc.watchUsersWithStandaloneAdCoopPending(),
-            builder: (context, standSnap) {
+            stream: svc.watchUsersWithAdCoopAdminReviewPending(),
+            builder: (context, adminSnap) {
               return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: svc.watchUsersWithAdCoopAdminReviewPending(),
-                builder: (context, adminSnap) {
-                  return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                     stream: svc.watchUsersWithManagedAdCoopPromotions(),
                     builder: (context, promoSnap) {
                       return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -4425,14 +4513,14 @@ class _AdCoopReviewPanel extends StatelessWidget {
                               adminSnap.error ??
                               promoSnap.error ??
                               archiveSnap.error;
-                          if (err != null) {
-                            return Center(
-                              child: Text(_streamErrorMessage(lang, err)),
-                            );
-                          }
+                  if (err != null) {
+                    return Center(
+                      child: Text(_streamErrorMessage(lang, err)),
+                    );
+                  }
                           if (!orderSnap.hasData ||
                               !standSnap.hasData ||
-                              !adminSnap.hasData ||
+                      !adminSnap.hasData ||
                               !promoSnap.hasData ||
                               !archiveSnap.hasData) {
                             return const Center(
@@ -4451,14 +4539,14 @@ class _AdCoopReviewPanel extends StatelessWidget {
                               (a, b) => _adCoopOrderSortMs(b.data())
                                   .compareTo(_adCoopOrderSortMs(a.data())),
                             );
-                          final standDocs = standSnap.data!.docs
+                  final standDocs = standSnap.data!.docs
                               .map((d) =>
                                   d as DocumentSnapshot<Map<String, dynamic>>)
-                              .toList();
-                          final adminDocs = adminSnap.data!.docs
+                      .toList();
+                  final adminDocs = adminSnap.data!.docs
                               .map((d) =>
                                   d as DocumentSnapshot<Map<String, dynamic>>)
-                              .toList();
+                      .toList();
                           final promoDocs = promoSnap.data!.docs
                               .map((d) =>
                                   d as DocumentSnapshot<Map<String, dynamic>>)
@@ -4493,9 +4581,9 @@ class _AdCoopReviewPanel extends StatelessWidget {
                               children: [
                                 if (orderDocs.isNotEmpty)
                                   _adCoopApprovalOrderListBody(
-                                    context,
-                                    lang,
-                                    svc,
+                      context,
+                      lang,
+                      svc,
                                     orderDocs,
                                   ),
                                 if (mergedUserDocs.isNotEmpty)
@@ -4557,10 +4645,10 @@ class _AdCoopReviewPanel extends StatelessWidget {
                     _mergeAdCoopApprovalUserDocs(standDocs, adminDocs),
                     promoDocs,
                   );
-                  return _adCoopApprovalMergedListBody(
-                    context,
-                    lang,
-                    svc,
+                      return _adCoopApprovalMergedListBody(
+                        context,
+                        lang,
+                        svc,
                     mergedAb,
                   );
                 },
@@ -4580,86 +4668,86 @@ class _AdCoopReviewPanel extends StatelessWidget {
           );
         }
         if (!orderSnap.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final docs = orderSnap.data!.docs
-            .where((d) => _subscriptionOrderIsAdCoop(d.data()))
-            .toList();
-        final monthlyAd = svc.filterOrdersThisMonth(docs);
-        final monthPaidHkd = _subscriptionPlanMonthlyPaidHkd(monthlyAd);
-        final paidAmtStr = _adminFormatHkdStat(monthPaidHkd);
+              return const Center(child: CircularProgressIndicator());
+            }
+            final docs = orderSnap.data!.docs
+                .where((d) => _subscriptionOrderIsAdCoop(d.data()))
+                .toList();
+            final monthlyAd = svc.filterOrdersThisMonth(docs);
+            final monthPaidHkd = _subscriptionPlanMonthlyPaidHkd(monthlyAd);
+            final paidAmtStr = _adminFormatHkdStat(monthPaidHkd);
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (embedMonthlySummary) ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '${lang.getString('admin_sec_i_monthly_orders')}：${monthlyAd.length}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
+            return SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (embedMonthlySummary) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${lang.getString('admin_sec_i_monthly_orders')}：${monthlyAd.length}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          '${lang.getString('admin_sec_i_monthly_paid_total')}：HKD\$$paidAmtStr',
-                          textAlign: TextAlign.end,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                            color: Colors.green.shade800,
+                          Expanded(
+                            child: Text(
+                              '${lang.getString('admin_sec_i_monthly_paid_total')}：HKD\$$paidAmtStr',
+                              textAlign: TextAlign.end,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: Colors.green.shade800,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 24),
-              ],
+                    ),
+                    const Divider(height: 24),
+                  ],
               if (docs.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(lang.getString('admin_sec_empty')),
-                ),
-              if (docs.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: AdminPagedDocumentsFrame(
-                    expand: false,
-                    docs: docs,
-                    childBuilder: (context, pageDocs) {
-                      return ListView.builder(
-                        padding: EdgeInsets.zero,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: pageDocs.length,
-                        itemBuilder: (context, i) {
-                          return _adminSubscriptionOrderCard(
-                            context,
-                            lang,
-                            svc,
-                            pageDocs[i],
-                            showAdPostContentBlock: !embedMonthlySummary,
-                            adPostContentUseInline: !embedMonthlySummary,
-                            hideAdOrderPaymentMeta: !embedMonthlySummary,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(lang.getString('admin_sec_empty')),
+                    ),
+                  if (docs.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: AdminPagedDocumentsFrame(
+                        expand: false,
+                        docs: docs,
+                        childBuilder: (context, pageDocs) {
+                          return ListView.builder(
+                            padding: EdgeInsets.zero,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: pageDocs.length,
+                            itemBuilder: (context, i) {
+                              return _adminSubscriptionOrderCard(
+                                context,
+                                lang,
+                                svc,
+                                pageDocs[i],
+                                showAdPostContentBlock: !embedMonthlySummary,
+                                adPostContentUseInline: !embedMonthlySummary,
+                                hideAdOrderPaymentMeta: !embedMonthlySummary,
                             showAdCoopReviewControls: !embedMonthlySummary,
+                              );
+                            },
                           );
                         },
-                      );
-                    },
-                  ),
-                ),
-            ],
-          ),
+                      ),
+                    ),
+                ],
+              ),
         );
       },
     );

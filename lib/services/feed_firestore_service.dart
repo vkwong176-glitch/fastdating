@@ -345,7 +345,27 @@ class FeedFirestoreService {
     return null;
   }
 
-  /// 依建立時間新到舊
+  /// 公開牆單筆是否應出現在列表（含宣傳貼文須為發佈中且未過期）。
+  static UserPostItem? userPostItemFromPublicFeedDocIfIncluded(
+    String id,
+    Map<String, dynamic> m,
+  ) {
+    final nowUtc = DateTime.now().toUtc();
+    if (m['isAdPromotion'] == true) {
+      final status = (m['promotionStatus'] as String?)?.trim() ?? '';
+      if (status != adPromotionStatusActive) {
+        return null;
+      }
+      final exp = m['promotionExpiresAt'];
+      if (exp is Timestamp && !exp.toDate().toUtc().isAfter(nowUtc)) {
+        return null;
+      }
+    }
+    return UserPostItem.fromFirestore(id, m);
+  }
+
+  /// 依建立時間新到舊。**注意**：[limit] 筆之後的貼文（含宣傳）不會出現在此串流；
+  /// [FeedProvider] 會另訂閱 [watchActiveAdPromotionPosts] 合併，確保發佈中之宣傳貼文一定可見。
   Stream<List<UserPostItem>> watchPublicPosts({int limit = 1000}) {
     if (!FirebaseBootstrap.isReady) {
       return Stream.value(const []);
@@ -356,21 +376,35 @@ class FeedFirestoreService {
         .limit(limit)
         .snapshots()
         .map((snap) {
-      final nowUtc = DateTime.now().toUtc();
       return snap.docs
           .map((d) {
-            final m = d.data();
-            if (m['isAdPromotion'] == true) {
-              final status = (m['promotionStatus'] as String?)?.trim() ?? '';
-              if (status != adPromotionStatusActive) {
-                return null;
-              }
-              final exp = m['promotionExpiresAt'];
-              if (exp is Timestamp && !exp.toDate().toUtc().isAfter(nowUtc)) {
-                return null;
-              }
-            }
-            return UserPostItem.fromFirestore(d.id, m);
+            final item =
+                userPostItemFromPublicFeedDocIfIncluded(d.id, d.data());
+            return item;
+          })
+          .whereType<UserPostItem>()
+          .where((p) => !p.isCounterInviteSystemPost)
+          .where(isWithinPublicFeedRetention)
+          .toList();
+    });
+  }
+
+  /// 不經 [createdAt] 排序範圍限制，額外載入發佈中且未過期之宣傳貼文（與 [watchPublicPosts] 合併）。
+  Stream<List<UserPostItem>> watchActiveAdPromotionPosts({int limit = 100}) {
+    if (!FirebaseBootstrap.isReady) {
+      return Stream.value(const []);
+    }
+    return _db
+        .collection(FirestorePaths.publicFeedPosts)
+        .where('isAdPromotion', isEqualTo: true)
+        .limit(limit)
+        .snapshots()
+        .map((snap) {
+      return snap.docs
+          .map((d) {
+            final item =
+                userPostItemFromPublicFeedDocIfIncluded(d.id, d.data());
+            return item;
           })
           .whereType<UserPostItem>()
           .where((p) => !p.isCounterInviteSystemPost)
