@@ -176,6 +176,10 @@
           {
             "key": "Cache-Control",
             "value": "no-cache, no-store, must-revalidate, max-age=0"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(self), microphone=(self), display-capture=(self), fullscreen=(self), geolocation=(self)"
           }
         ]
       },
@@ -185,6 +189,10 @@
           {
             "key": "Cache-Control",
             "value": "no-cache, no-store, must-revalidate, max-age=0"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(self), microphone=(self), display-capture=(self), fullscreen=(self), geolocation=(self)"
           }
         ]
       },
@@ -194,6 +202,10 @@
           {
             "key": "Cache-Control",
             "value": "no-cache, no-store, must-revalidate, max-age=0"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(self), microphone=(self), display-capture=(self), fullscreen=(self), geolocation=(self)"
           }
         ]
       },
@@ -203,6 +215,10 @@
           {
             "key": "Cache-Control",
             "value": "no-cache, no-store, must-revalidate, max-age=0"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(self), microphone=(self), display-capture=(self), fullscreen=(self), geolocation=(self)"
           }
         ]
       },
@@ -212,6 +228,10 @@
           {
             "key": "Cache-Control",
             "value": "no-cache, no-store, must-revalidate, max-age=0"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(self), microphone=(self), display-capture=(self), fullscreen=(self), geolocation=(self)"
           }
         ]
       },
@@ -221,6 +241,10 @@
           {
             "key": "Cache-Control",
             "value": "no-cache, no-store, must-revalidate"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(self), microphone=(self), display-capture=(self), fullscreen=(self), geolocation=(self)"
           }
         ]
       },
@@ -230,6 +254,10 @@
           {
             "key": "Cache-Control",
             "value": "no-cache, no-store, must-revalidate, max-age=0"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(self), microphone=(self), display-capture=(self), fullscreen=(self), geolocation=(self)"
           }
         ]
       }
