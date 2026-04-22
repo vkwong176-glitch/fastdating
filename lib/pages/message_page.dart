@@ -404,6 +404,8 @@ class _MessagePageState extends State<MessagePage> {
           Provider.of<SubscriptionProvider>(context);
       final showFreeChatTip =
           !subscriptionProvider.isSubscriptionActiveUnlimited;
+      final hideInFeedAdPromos =
+          subscriptionProvider.shouldHideInFeedAdPromotions;
       return Scaffold(
         appBar: MainTabAppBar(
           title: langProvider.getString('message'),
@@ -463,8 +465,9 @@ class _MessagePageState extends State<MessagePage> {
                     }
                   });
                   final baseChatList = _mergedChatList(real);
-                  final promotionPosts =
-                      Provider.of<FeedProvider>(context).userPosts;
+                  final promotionPosts = hideInFeedAdPromos
+                      ? const <UserPostItem>[]
+                      : Provider.of<FeedProvider>(context).userPosts;
                   final chatList = _mergePromotionAdsIntoChats(
                     baseChatList,
                     promotionPosts,

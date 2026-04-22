@@ -274,6 +274,22 @@ class SubscriptionProvider with ChangeNotifier {
   /// 已於 Firestore 標記為訂閱生效（與聊天配額「無限」規則一致）。
   bool get isSubscriptionActiveUnlimited => _subscriptionActive;
 
+  /// 「訂閱方案·移除所有廣告」等已付款且在有效期內：不在訊息／邀聊通知／附近的人穿插宣傳貼文。
+  /// 與 [isSubscriptionActiveUnlimited]（[users.subscriptionActive]）對齊，並以 [SubscriptionRecord.expirationDate] 補上訂單判斷。
+  bool get shouldHideInFeedAdPromotions {
+    if (!FirebaseBootstrap.isReady) return false;
+    if (isSubscriptionActiveUnlimited) return true;
+    final now = DateTime.now();
+    for (final r in _orderRecords) {
+      if (r.purchaseKind != SubscriptionOrderService.purchaseKindSubscription) {
+        continue;
+      }
+      if (!r.isPaid) continue;
+      if (now.isBefore(r.expirationDate)) return true;
+    }
+    return false;
+  }
+
   SubscriptionRecord? get latestRecord {
     final r = subscriptionPlanRecords;
     return r.isEmpty ? null : r.first;

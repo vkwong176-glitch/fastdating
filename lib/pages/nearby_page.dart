@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/feed_provider.dart';
+import '../providers/subscription_provider.dart';
 import '../utils/constants.dart';
 import '../utils/ad_promotion_utils.dart';
 import '../utils/launch_url_helper.dart';
@@ -775,8 +776,12 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
                     )
                   : Builder(
                       builder: (context) {
-                        final promotionPosts =
-                            Provider.of<FeedProvider>(context).userPosts;
+                        final hideAds = context
+                            .watch<SubscriptionProvider>()
+                            .shouldHideInFeedAdPromotions;
+                        final promotionPosts = hideAds
+                            ? <UserPostItem>[]
+                            : Provider.of<FeedProvider>(context).userPosts;
                         final mergedUsers = _mergePromotionAdsIntoNearby(
                           _filteredUsers,
                           promotionPosts,

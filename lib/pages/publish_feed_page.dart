@@ -11,6 +11,7 @@ import '../providers/feed_provider.dart';
 import '../providers/language_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/nav_provider.dart';
+import '../providers/subscription_provider.dart';
 import '../services/chat_firestore_service.dart';
 import '../services/chat_quota_service.dart';
 import '../services/feed_firestore_service.dart';
@@ -417,8 +418,12 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
           builder: (context) {
             final allPosts =
                 Provider.of<FeedProvider>(context).userPosts;
-            final promotionPosts =
-                allPosts.where((p) => p.isAdPromotion).toList();
+            final hideAds = context
+                .watch<SubscriptionProvider>()
+                .shouldHideInFeedAdPromotions;
+            final promotionPosts = hideAds
+                ? <UserPostItem>[]
+                : allPosts.where((p) => p.isAdPromotion).toList();
             final normalPosts =
                 allPosts.where((p) => !p.isAdPromotion).toList();
             final posts =
