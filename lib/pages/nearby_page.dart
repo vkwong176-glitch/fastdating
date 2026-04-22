@@ -17,6 +17,8 @@ import '../services/nearby_api.dart';
 import '../services/screen_capture_platform.dart';
 import '../services/user_firestore_service.dart';
 import '../services/feed_firestore_service.dart';
+import '../services/chat_firestore_service.dart';
+import '../services/chat_quota_service.dart';
 import '../widgets/gender_filter.dart';
 import '../widgets/main_tab_app_bar.dart';
 import '../widgets/chat_quota_gate.dart';
@@ -605,6 +607,78 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
     }
   }
 
+  /// 與 [HomePage._sendChatInviteToPeer] 相同：送出席端邀聊（對方於邀聊通知接受後可聊）。
+  Future<void> _sendChatInviteToPeer(String peerId, String peerName) async {
+    if (peerId.startsWith('demo_match_')) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('示範用戶僅供預覽，請在真實會員上使用邀請聊天')),
+      );
+      return;
+    }
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (!FirebaseBootstrap.isReady || auth.uid == null) return;
+    try {
+      final sent = await ChatFirestoreService.instance.sendChatInvitation(
+        fromUid: auth.uid!,
+        toUid: peerId,
+      );
+      if (!mounted) return;
+      if (!sent) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('雙方已配對，可直接按入卡片進入聊天')),
+        );
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            peerName.isNotEmpty
+                ? '已邀請 $peerName，對方於「邀聊通知」頁接受後即可聊天'
+                : '已送出邀請，對方於「邀聊通知」頁接受後即可聊天',
+          ),
+        ),
+      );
+    } on ChatQuotaExceededException {
+      if (!mounted) return;
+      await showChatQuotaPaywallDialog(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('邀請失敗：$e')),
+      );
+    }
+  }
+
+  /// 名稱行右側：淺底、主色邊的「邀請聊天」樣式（與首頁邀聊按鈕語意一致）。
+  Widget _buildNearbyInviteChatPill(VoidCallback onPressed) {
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppConstants.primaryColor,
+        backgroundColor: const Color(0xFFFFF0F0),
+        side: BorderSide(
+          color: AppConstants.primaryColor,
+          width: 1,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+      child: const Text(
+        '邀請聊天',
+        maxLines: 1,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final langProvider = Provider.of<LanguageProvider>(context);
@@ -710,6 +784,14 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
                             final userId = user['id']?.toString() ?? '';
                             final name = user['name']?.toString() ?? '';
                             final avatar = user['avatar']?.toString() ?? '';
+                            final auth = Provider.of<AuthProvider>(
+                              context,
+                              listen: false,
+                            );
+                            final showInviteChat = FirebaseBootstrap.isReady &&
+                                auth.isLogin &&
+                                auth.uid != null &&
+                                userId.length >= 20;
                             final isMobile = MediaQuery.sizeOf(context).width <
                                 AppConstants.layoutWideBreakpoint;
 
@@ -783,15 +865,32 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            '$name, ${user['age']}',
-                                            style: TextStyle(
-                                              fontSize: 17 + nameBoost,
-                                              fontWeight: FontWeight.bold,
-                                              color: isMobile
-                                                  ? Colors.black
-                                                  : null,
-                                            ),
+                                          Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  '$name, ${user['age']}',
+                                                  style: TextStyle(
+                                                    fontSize: 17 + nameBoost,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: isMobile
+                                                        ? Colors.black
+                                                        : null,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (showInviteChat) ...[
+                                                const SizedBox(width: 4),
+                                                _buildNearbyInviteChatPill(
+                                                  () => _sendChatInviteToPeer(
+                                                    userId,
+                                                    name,
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
