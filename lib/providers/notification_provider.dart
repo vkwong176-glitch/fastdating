@@ -14,21 +14,27 @@ class MessageNotificationItem {
   });
 }
 
-/// APP 內通知相關狀態與待顯示通知（不含自訂音效／震動；推播音效由系統處理）
+/// APP 內通知相關狀態與待顯示通知（推播音效由系統處理；新訊息列表偵測時可播短提示音）
 class NotificationProvider with ChangeNotifier {
   static const _kHeartNotification = 'notif_heart';
+  static const _kMessageSound = 'notif_message_sound';
 
   bool _heartNotification = true;
+  bool _messageSoundEnabled = true;
 
   bool _prefsLoaded = false;
 
   bool get heartNotification => _heartNotification;
+
+  /// 訊息列表偵測到對方新訊息時是否播放短提示音（預設開啟）。
+  bool get messageSoundEnabled => _messageSoundEnabled;
 
   Future<void> loadFromPrefs() async {
     if (_prefsLoaded) return;
     try {
       final p = await SharedPreferences.getInstance();
       _heartNotification = p.getBool(_kHeartNotification) ?? true;
+      _messageSoundEnabled = p.getBool(_kMessageSound) ?? true;
       _prefsLoaded = true;
       notifyListeners();
     } catch (_) {
@@ -40,11 +46,18 @@ class NotificationProvider with ChangeNotifier {
     try {
       final p = await SharedPreferences.getInstance();
       await p.setBool(_kHeartNotification, _heartNotification);
+      await p.setBool(_kMessageSound, _messageSoundEnabled);
     } catch (_) {}
   }
 
   set heartNotification(bool v) {
     _heartNotification = v;
+    notifyListeners();
+    _persist();
+  }
+
+  set messageSoundEnabled(bool v) {
+    _messageSoundEnabled = v;
     notifyListeners();
     _persist();
   }

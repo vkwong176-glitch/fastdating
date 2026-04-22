@@ -2,21 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../utils/constants.dart';
+import '../providers/language_provider.dart';
 import '../providers/notification_provider.dart';
 
-/// 通知設定：僅「按心通知」是否啟用（自訂 App 內音效／震動已移除，交給系統推播）
+/// 通知設定：按心推播、新訊息列表短提示音等
 class NotificationSettingsPage extends StatelessWidget {
   const NotificationSettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<NotificationProvider>(context);
+    final lang = Provider.of<LanguageProvider>(context);
 
     final theme = Theme.of(context);
     final titleFs = AppConstants.appBarTitleResolvedSize(context, base: 20);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('通知設定'),
+        title: Text(lang.getString('notif_settings_title')),
         titleTextStyle: theme.appBarTheme.titleTextStyle?.copyWith(
               fontSize: titleFs,
             ) ??
@@ -34,10 +36,19 @@ class NotificationSettingsPage extends StatelessWidget {
         children: [
           _buildSection(
             context,
-            '背景通知',
+            lang.getString('notif_section_background'),
             [
-              _switchRow('按心通知', provider.heartNotification,
-                  (v) => provider.heartNotification = v),
+              _switchRow(
+                lang.getString('notif_heart_enabled'),
+                provider.heartNotification,
+                (v) => provider.heartNotification = v,
+              ),
+              const Divider(height: 1),
+              _switchRow(
+                lang.getString('notif_new_message_sound'),
+                provider.messageSoundEnabled,
+                (v) => provider.messageSoundEnabled = v,
+              ),
             ],
           ),
         ],

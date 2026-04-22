@@ -17,6 +17,7 @@ import '../services/firebase_bootstrap.dart';
 import '../services/chat_firestore_service.dart';
 import '../services/chat_receipt_cookies.dart';
 import '../services/feed_firestore_service.dart';
+import '../utils/new_message_sound.dart';
 import '../utils/launch_url_helper.dart';
 import '../widgets/main_tab_app_bar.dart';
 import '../widgets/user_avatar_live.dart';
@@ -64,12 +65,29 @@ class _MessagePageState extends State<MessagePage> {
     }
   }
 
-  void _syncConversationListFingerprints(List<Map<String, dynamic>> real) {
+  void _syncConversationListFingerprints(
+    List<Map<String, dynamic>> real,
+    String? myUid,
+  ) {
     if (_skipFirstConversationListSnapshot) {
       _skipFirstConversationListSnapshot = false;
       _seedConversationListFingerprints(real);
       return;
     }
+    if (myUid == null || myUid.isEmpty) {
+      for (final item in real) {
+        final cid = item['conversationId'] as String? ?? '';
+        if (cid.isEmpty) continue;
+        final sender = item['lastMessageSenderId'] as String? ?? '';
+        final ms = item['lastMessageAtMs'] as int? ??
+            (item['firestoreListMs'] as int? ?? 0);
+        final preview = item['lastMessage'] as String? ?? '';
+        _conversationListFingerprints[cid] = '$ms|$sender|$preview';
+      }
+      return;
+    }
+    final notif = Provider.of<NotificationProvider>(context, listen: false);
+    var playIncoming = false;
     for (final item in real) {
       final cid = item['conversationId'] as String? ?? '';
       if (cid.isEmpty) continue;
@@ -78,7 +96,17 @@ class _MessagePageState extends State<MessagePage> {
           (item['firestoreListMs'] as int? ?? 0);
       final preview = item['lastMessage'] as String? ?? '';
       final fp = '$ms|$sender|$preview';
+      final prev = _conversationListFingerprints[cid];
+      if (prev != null &&
+          prev != fp &&
+          sender.isNotEmpty &&
+          sender != myUid) {
+        playIncoming = true;
+      }
       _conversationListFingerprints[cid] = fp;
+    }
+    if (playIncoming && notif.messageSoundEnabled) {
+      unawaited(playNewMessageNotificationSound());
     }
   }
 
@@ -455,7 +483,7 @@ class _MessagePageState extends State<MessagePage> {
                   }
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (!mounted) return;
-                    _syncConversationListFingerprints(real);
+                    _syncConversationListFingerprints(real, auth.uid);
                     if (kIsWeb) {
                       var sum = 0;
                       for (final item in real) {
