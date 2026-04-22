@@ -100,6 +100,25 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
     return 'HKD\$$t';
   }
 
+  /// 與 [SubscriptionRecord.planName]／[ActivityRecord.content] 比對去重用（略去「報名人數」括號等差異）。
+  static String _normalizeActivityReceiptLineForDedupe(String raw) {
+    var t = raw.trim();
+    t = t.replaceAll(RegExp(r'[（(]\s*報名人數\s*\d+\s*[）)]'), '');
+    t = t.replaceAll(RegExp(r'\s+'), ' ');
+    return t.trim();
+  }
+
+  static String _activityReceiptDedupeKey({
+    required String totalPriceRaw,
+    required DateTime at,
+    required String contentRaw,
+  }) {
+    final price = _formatHkdAmount(totalPriceRaw).replaceAll(' ', '');
+    final minute = DateTime(at.year, at.month, at.day, at.hour, at.minute);
+    final norm = _normalizeActivityReceiptLineForDedupe(contentRaw);
+    return '$price|$minute|$norm';
+  }
+
   static bool _sameCalendarDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
@@ -166,6 +185,9 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
     final out = <_ReceiptItem>[];
     final unpaidCutoff = DateTime.now().subtract(_unpaidReceiptTtl);
 
+    /// 已由 [subscription_orders] 列出的活動報名（用於略過舊版重複之本機 [ActivityRecord]）。
+    final activityKeysFromFirestore = <String>{};
+
     for (final r in subscriptionRecords) {
       if (r.isAccountTierHint) continue;
       if (!r.isPaid && r.purchaseDate.isBefore(unpaidCutoff)) continue;
@@ -189,6 +211,16 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
           kind == SubscriptionOrderService.purchaseKindActivityRegistration
               ? r.planName
               : '${r.planName} · ${r.months}$monthsSuffix';
+
+      if (kind == SubscriptionOrderService.purchaseKindActivityRegistration) {
+        activityKeysFromFirestore.add(
+          _activityReceiptDedupeKey(
+            totalPriceRaw: r.totalPrice,
+            at: r.purchaseDate,
+            contentRaw: r.planName,
+          ),
+        );
+      }
 
       out.add(
         _ReceiptItem(
@@ -233,6 +265,12 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
 
     for (final r in activityRecords) {
       if (!r.isPaid && r.paidAt.isBefore(unpaidCutoff)) continue;
+      final dedupeKey = _activityReceiptDedupeKey(
+        totalPriceRaw: r.price,
+        at: r.paidAt,
+        contentRaw: r.content,
+      );
+      if (activityKeysFromFirestore.contains(dedupeKey)) continue;
       out.add(
         _ReceiptItem(
           typeLabel: lang.getString('payment_type_activity'),

@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../providers/activity_provider.dart';
 import '../providers/language_provider.dart';
 import '../services/firebase_bootstrap.dart';
 import '../services/store_iap_service.dart';
@@ -25,23 +24,7 @@ String _activitySummarySnippet(String? body, {int maxChars = 400}) {
   return '${t.substring(0, maxChars)}…';
 }
 
-Future<void> _pushActivityLocalRecord(
-  BuildContext context, {
-  required String title,
-  required int participants,
-  required String totalPrice,
-  required String paymentMethodCode,
-}) async {
-  if (!context.mounted) return;
-  Provider.of<ActivityProvider>(context, listen: false).addRecord(
-    content: title,
-    price: totalPrice,
-    paymentMethod: paymentMethodCode,
-    participants: participants,
-  );
-}
-
-/// 活動「了解詳情」：內容、摺疊選人數、與訂閱相同三種付款；完成後寫入 [subscription_orders] 並更新本機參加紀錄。
+/// 活動「了解詳情」：內容、摺疊選人數、與訂閱相同三種付款；完成後寫入 [subscription_orders]（購買記錄由 [SubscriptionProvider] 同步，不再另寫 [ActivityProvider] 以免重複收據）。
 Future<void> showActivityDetailRegistrationSheet(
   BuildContext hostContext, {
   required String activityId,
@@ -357,16 +340,6 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
     );
   }
 
-  Future<void> _afterOrderCreated(String paymentMethodCode) async {
-    await _pushActivityLocalRecord(
-      widget.hostContext,
-      title: _titleWithOptionalDateForWhatsApp,
-      participants: _participants,
-      totalPrice: _totalPrice,
-      paymentMethodCode: paymentMethodCode,
-    );
-  }
-
   Future<void> _openManualTransfer() async {
     if (!_requireMemberLogin()) return;
     final lang = widget.lang;
@@ -384,15 +357,6 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
           '${lang.getString('activity_whatsapp_prefill')}$_titleWithOptionalDateForWhatsApp $_participants${lang.getString('activity_whatsapp_prefill_tail')}$_totalPrice',
       activityId: widget.activityId,
       activitySummary: _summaryForOrder,
-      onOrderSubmitted: () {
-        _pushActivityLocalRecord(
-          widget.hostContext,
-          title: _titleWithOptionalDateForWhatsApp,
-          participants: _participants,
-          totalPrice: _totalPrice,
-          paymentMethodCode: 'manual_fps_wechat_bank',
-        );
-      },
     );
   }
 
@@ -401,7 +365,7 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
     final supported = StoreIapService.instance.supportedOnThisPlatform &&
         await StoreIapService.instance.isAvailable();
     if (!supported) {
-      final orderId = await SubscriptionOrderService.recordOrder(
+      await SubscriptionOrderService.recordOrder(
         planName: _titleWithOptionalDateForWhatsApp,
         months: '$_participants',
         totalPrice: _totalPrice,
@@ -411,11 +375,7 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
         activityId: widget.activityId,
         activitySummary: _summaryForOrder,
       );
-      if (orderId != null) {
-        await _afterOrderCreated(
-          kIsWeb ? 'iap_unavailable_web' : 'iap_unavailable',
-        );
-      }
+      // 收據僅依 [subscription_orders] 一筆；勿再寫本機以免購買記錄重複。
       if (mounted) {
         Navigator.pop(context);
       }
