@@ -193,12 +193,7 @@ class _MainShellState extends State<MainShell> {
         boundedShell,
         const ChatInvitePopupHost(),
         const FeedHeartInboxHost(),
-        const Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: CookieConsentBanner(),
-        ),
+        const CookieConsentBanner(),
       ],
     );
   }

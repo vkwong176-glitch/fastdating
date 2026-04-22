@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import 'navigation/navigation_bridge.dart';
@@ -198,6 +199,14 @@ class _AuthBootstrapState extends State<_AuthBootstrap> {
       if (!mounted) return;
       if (user == null || user.isAnonymous) {
         context.read<CookieConsentProvider>().onAuthSignedOut();
+        return;
+      }
+      if (kIsWeb && FirebaseBootstrap.isReady) {
+        unawaited(
+          context
+              .read<CookieConsentProvider>()
+              .hydrateMemberConsentFromServer(user.uid),
+        );
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
