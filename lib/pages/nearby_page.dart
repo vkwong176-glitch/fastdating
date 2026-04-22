@@ -608,6 +608,7 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
   }
 
   /// 與 [HomePage._sendChatInviteToPeer] 相同：送出席端邀聊（對方於邀聊通知接受後可聊）。
+  /// 虛假／示範 id（短 id）與未登入時只提示，不寫雲端。
   Future<void> _sendChatInviteToPeer(String peerId, String peerName) async {
     if (peerId.startsWith('demo_match_')) {
       if (!mounted) return;
@@ -616,8 +617,22 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
       );
       return;
     }
+    if (peerId.length < 20) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('示範用戶僅供預覽，請在真實會員上使用邀請聊天')),
+      );
+      return;
+    }
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    if (!FirebaseBootstrap.isReady || auth.uid == null) return;
+    if (!FirebaseBootstrap.isReady || auth.uid == null) {
+      if (!mounted) return;
+      final lang = Provider.of<LanguageProvider>(context, listen: false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(lang.getString('message_list_guest_hint'))),
+      );
+      return;
+    }
     try {
       final sent = await ChatFirestoreService.instance.sendChatInvitation(
         fromUid: auth.uid!,
@@ -650,29 +665,29 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
     }
   }
 
-  /// 名稱行右側：淺底、主色邊的「邀請聊天」樣式（與首頁邀聊按鈕語意一致）。
+  /// 名稱行右側：淺底、主色邊的「邀請聊天」樣式；整體尺寸為原設計 150%。
   Widget _buildNearbyInviteChatPill(VoidCallback onPressed) {
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         foregroundColor: AppConstants.primaryColor,
         backgroundColor: const Color(0xFFFFF0F0),
-        side: BorderSide(
+        side: const BorderSide(
           color: AppConstants.primaryColor,
-          width: 1,
+          width: 1.5,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(30),
         ),
       ),
       child: const Text(
         '邀請聊天',
         maxLines: 1,
         style: TextStyle(
-          fontSize: 12,
+          fontSize: 18,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -784,14 +799,6 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
                             final userId = user['id']?.toString() ?? '';
                             final name = user['name']?.toString() ?? '';
                             final avatar = user['avatar']?.toString() ?? '';
-                            final auth = Provider.of<AuthProvider>(
-                              context,
-                              listen: false,
-                            );
-                            final showInviteChat = FirebaseBootstrap.isReady &&
-                                auth.isLogin &&
-                                auth.uid != null &&
-                                userId.length >= 20;
                             final isMobile = MediaQuery.sizeOf(context).width <
                                 AppConstants.layoutWideBreakpoint;
 
@@ -881,15 +888,13 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
                                                   ),
                                                 ),
                                               ),
-                                              if (showInviteChat) ...[
-                                                const SizedBox(width: 4),
-                                                _buildNearbyInviteChatPill(
-                                                  () => _sendChatInviteToPeer(
-                                                    userId,
-                                                    name,
-                                                  ),
+                                              const SizedBox(width: 4),
+                                              _buildNearbyInviteChatPill(
+                                                () => _sendChatInviteToPeer(
+                                                  userId,
+                                                  name,
                                                 ),
-                                              ],
+                                              ),
                                             ],
                                           ),
                                           const SizedBox(height: 4),
