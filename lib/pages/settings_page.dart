@@ -293,13 +293,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 trailingIconColor: isMobile ? Colors.black : AppConstants.grey,
                 onTap: () => _showContactUsSheet(context, langProvider),
               ),
-              if (kIsWeb)
-                _webScreenRecordingLimitHint(
-                  context,
-                  langProvider,
-                  contentFontExtra,
-                  mobileFs,
-                ),
             ],
             titleFontSizeExtra: contentFontExtra,
             mobileFontExtra: mobileFs,
@@ -828,43 +821,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 style: mutedTextStyle,
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Web：說明 Android 內建錄影／截圖常見全黑，與網站權限宣告無關（CanvasKit 限制）。
-  Widget _webScreenRecordingLimitHint(
-    BuildContext context,
-    LanguageProvider lang,
-    double fontSizeExtra,
-    double mobileFontExtra,
-  ) {
-    final theme = Theme.of(context);
-    final base = theme.textTheme.bodySmall ?? const TextStyle();
-    final fs = 13.0 + fontSizeExtra + mobileFontExtra;
-    final style = base.copyWith(
-      color: theme.colorScheme.onSurfaceVariant,
-      fontSize: fs.clamp(12.0, 22.0),
-      height: 1.4,
-    );
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.info_outline,
-            size: 18,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              lang.getString('web_screen_recording_limit_hint'),
-              style: style,
-            ),
           ),
         ],
       ),
