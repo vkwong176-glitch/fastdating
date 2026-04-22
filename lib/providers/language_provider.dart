@@ -201,6 +201,8 @@ class LanguageProvider with ChangeNotifier {
     'faq_video_body': '以下為常見問題相關說明影片，點擊下方即可於 YouTube 觀看。',
     'faq_open_youtube': '開啟 YouTube 影片',
     'contact_us': '聯絡我們',
+    'web_screen_recording_limit_hint':
+        '使用手機內建螢幕錄影或部分截圖工具時，瀏覽器內畫面可能全黑。此為網頁繪圖（CanvasKit）與系統擷取常見限制，無法僅以網站權限解除。建議改用官方 App 錄影，或以另一部裝置拍攝螢幕。',
     'contact_us_whatsapp_action': 'WhatsApp',
     'contact_us_email_label': '電郵',
     'user_terms': '使用者條款',
@@ -803,6 +805,8 @@ class LanguageProvider with ChangeNotifier {
     'faq_video_body': '以下为常见问题相关说明视频，点击下方即可在 YouTube 观看。',
     'faq_open_youtube': '打开 YouTube 视频',
     'contact_us': '联络我们',
+    'web_screen_recording_limit_hint':
+        '使用手机内置录屏或部分截图时，浏览器内可能全黑。此为网页绘图与系统采集的常见限制，无法仅靠网站权限解除。建议改用官方 App 录屏，或用另一部设备拍摄屏幕。',
     'contact_us_whatsapp_action': 'WhatsApp',
     'contact_us_email_label': '电邮',
     'user_terms': '使用者条款',
@@ -1406,6 +1410,8 @@ class LanguageProvider with ChangeNotifier {
         'Here is a short video with answers to common questions. Tap below to watch on YouTube.',
     'faq_open_youtube': 'Open on YouTube',
     'contact_us': 'Contact us',
+    'web_screen_recording_limit_hint':
+        'Built-in screen recording or some capture tools may show a black screen in the browser. This is a common CanvasKit + OS-capture limitation—not fixable with site “permissions” alone. Use the official app to record, or film the display with another device.',
     'contact_us_whatsapp_action': 'WhatsApp',
     'contact_us_email_label': 'Email',
     'user_terms': 'User terms',
