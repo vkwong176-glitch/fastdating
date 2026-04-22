@@ -425,6 +425,8 @@ class _ActivityPageState extends State<ActivityPage> {
   /// 活動頁淺黃底色（與搜尋列略分層）
   static const Color _activityPageBackground = Color(0xFFFFF9E6);
   static const Color _activitySearchStripBackground = Color(0xFFFFF3CC);
+  /// 手機／寬螢幕活動卡底色（淺灰，與頁面淺黃區隔）
+  static const Color _activityCardBackground = Color(0xFFEEEEEE);
 
   /// 1cm ≈ 38px；手機格寬 4cm；高度與 [childAspectRatio] 一致，略緊貼內容以減少卡底留白。
   /// 過矮時 [Column] 內 [Expanded] 會變 0，畫面變成標題下直接接價錢（圖被擠沒）。
@@ -433,7 +435,7 @@ class _ActivityPageState extends State<ActivityPage> {
   static const double _contentBoxMaxHeightPx = 454;
   static const double _edgePadding1cmPx = 38;
   static const double _cmLogicalPx = 38.0;
-  /// 手機／寬螢幕活動卡：「了解詳情」下緣到白卡底內距（0.15cm）
+  /// 手機／寬螢幕活動卡：「了解詳情」下緣到卡底內距（0.15cm）
   static const double _activityCardButtonBottomClearancePx = 0.15 * _cmLogicalPx;
   static const double _halfCmLogicalPx = 0.5 * _cmLogicalPx;
   /// 手機活動卡頂部白邊（0.15cm）
@@ -558,7 +560,7 @@ class _ActivityPageState extends State<ActivityPage> {
           final contentW = (cellW - _compactCardHorizontalPadPx * 2)
               .clamp(0.0, double.infinity);
           return Material(
-            color: Colors.white,
+            color: _activityCardBackground,
             elevation: 2,
             borderRadius: BorderRadius.circular(10),
             clipBehavior: Clip.antiAlias,
@@ -683,7 +685,7 @@ class _ActivityPageState extends State<ActivityPage> {
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         clipBehavior: Clip.antiAlias,
-        color: Colors.white,
+        color: _activityCardBackground,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(
             10,
