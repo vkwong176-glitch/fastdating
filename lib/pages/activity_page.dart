@@ -429,17 +429,15 @@ class _ActivityPageState extends State<ActivityPage> {
   /// 1cm ≈ 38px；手機格寬 4cm；高度與 [childAspectRatio] 一致，略緊貼內容以減少卡底留白。
   /// 過矮時 [Column] 內 [Expanded] 會變 0，畫面變成標題下直接接價錢（圖被擠沒）。
   static const double _imageSizePx = 302;
-  /// 寬螢幕（例：iPad）格線單格最大高度；略低以減少按鈕下與格底多餘空隙。
-  static const double _contentBoxMaxHeightPx = 458;
+  /// 寬螢幕（例：iPad）格線單格最大高度；與內文＋0.15cm 底內距對齊，避免格內大塊淺黃或卡下留白。
+  static const double _contentBoxMaxHeightPx = 454;
   static const double _edgePadding1cmPx = 38;
-  /// 寬螢幕活動卡內底距（與頂 10 對齊，避免 1cm 底留白過大）
-  static const double _wideCardBottomPaddingPx = 10;
   static const double _cmLogicalPx = 38.0;
+  /// 手機／寬螢幕活動卡：「了解詳情」下緣到白卡底內距（0.15cm）
+  static const double _activityCardButtonBottomClearancePx = 0.15 * _cmLogicalPx;
   static const double _halfCmLogicalPx = 0.5 * _cmLogicalPx;
   /// 手機活動卡頂部白邊（0.15cm）
   static const double _compactCardTopEdgePx = 0.15 * _cmLogicalPx;
-  /// 底部白邊：在頂部 0.15cm 基礎上再向上收約 0.2cm，緊貼「了解詳情」（≈ max(0, 0.15−0.2) cm）
-  static const double _compactCardBottomEdgePx = 0.0;
   /// 標題與活動圖之間（題述圖向下 0.2cm）
   static const double _compactTitleToImageGapPx = 0.2 * _cmLogicalPx;
   /// 圖與價錢間緊貼
@@ -485,7 +483,7 @@ class _ActivityPageState extends State<ActivityPage> {
   /// 緊湊卡除「正方形圖」以外之固定高度；須與 [_buildActivityCard] compact 內計算一致。
   static double get _compactCellFixedNoImagePx =>
       _compactCardTopEdgePx +
-      _compactCardBottomEdgePx +
+      _activityCardButtonBottomClearancePx +
       _compactTitleMaxLinesHeightPx +
       _compactTitleToImageGapPx +
       _compactImageToPriceGapPx +
@@ -552,27 +550,13 @@ class _ActivityPageState extends State<ActivityPage> {
     required bool compact,
   }) {
     if (compact) {
-      /// 必須與 [GridView] 配發的格線寬高一致；圖邊長依格高扣除標題／價／按鈕預留，避免溢出與過大留白。
+      /// 必須與 [GridView] 配發的格線寬高一致；[Expanded] 內圖方塊可吸收一／兩行標題高度差，避免按鈕下白帶。
       return LayoutBuilder(
         builder: (context, constraints) {
           final cellW = constraints.maxWidth;
           final cellH = constraints.maxHeight;
-          const horizontalPad = 6.0;
-          final contentW = (cellW - horizontalPad * 2).clamp(0.0, double.infinity);
-          /// 價錢兩行＋按鈕區（略大於字級以留安全像素）
-          const compactPriceBlockMinPx = 22.0;
-          const gapBeforeDetailButtonPx = 6.0;
-          const fixedNoImage = _compactCardTopEdgePx + _compactCardBottomEdgePx +
-              _compactTitleMaxLinesHeightPx +
-              _compactTitleToImageGapPx +
-              _compactImageToPriceGapPx +
-              compactPriceBlockMinPx +
-              gapBeforeDetailButtonPx +
-              _mobileDetailButtonHeightPx;
-          final imageSide = math.min(
-            contentW,
-            math.max(0.0, cellH - fixedNoImage),
-          );
+          final contentW = (cellW - _compactCardHorizontalPadPx * 2)
+              .clamp(0.0, double.infinity);
           return Material(
             color: Colors.white,
             elevation: 2,
@@ -586,11 +570,11 @@ class _ActivityPageState extends State<ActivityPage> {
                   _compactCardHorizontalPadPx,
                   _compactCardTopEdgePx,
                   _compactCardHorizontalPadPx,
-                  _compactCardBottomEdgePx,
+                  _activityCardButtonBottomClearancePx,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.max,
                   children: [
                     Text(
                       item.title,
@@ -605,13 +589,26 @@ class _ActivityPageState extends State<ActivityPage> {
                       ),
                     ),
                     SizedBox(height: _compactTitleToImageGapPx),
-                    Center(
-                      child: SizedBox(
-                        width: imageSide,
-                        height: imageSide,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: _activityHeroBackground(item),
+                    Expanded(
+                      child: Center(
+                        child: LayoutBuilder(
+                          builder: (context, imgConstraints) {
+                            final side = math.max(
+                              0.0,
+                              math.min(
+                                contentW,
+                                imgConstraints.maxHeight,
+                              ),
+                            );
+                            return SizedBox(
+                              width: side,
+                              height: side,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: _activityHeroBackground(item),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -688,7 +685,12 @@ class _ActivityPageState extends State<ActivityPage> {
         clipBehavior: Clip.antiAlias,
         color: Colors.white,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 10, 10, _wideCardBottomPaddingPx),
+          padding: const EdgeInsets.fromLTRB(
+            10,
+            10,
+            10,
+            _activityCardButtonBottomClearancePx,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
