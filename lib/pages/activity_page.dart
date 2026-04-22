@@ -429,9 +429,11 @@ class _ActivityPageState extends State<ActivityPage> {
   /// 1cm ≈ 38px；手機格寬 4cm；高度與 [childAspectRatio] 一致，略緊貼內容以減少卡底留白。
   /// 過矮時 [Column] 內 [Expanded] 會變 0，畫面變成標題下直接接價錢（圖被擠沒）。
   static const double _imageSizePx = 302;
-  static const double _contentBoxMaxHeightPx = 492;
+  /// 寬螢幕（例：iPad）格線單格最大高度；略低以減少按鈕下與格底多餘空隙。
+  static const double _contentBoxMaxHeightPx = 458;
   static const double _edgePadding1cmPx = 38;
-  static const double _detailBottomGap1cmPx = 38;
+  /// 寬螢幕活動卡內底距（與頂 10 對齊，避免 1cm 底留白過大）
+  static const double _wideCardBottomPaddingPx = 10;
   static const double _cmLogicalPx = 38.0;
   static const double _halfCmLogicalPx = 0.5 * _cmLogicalPx;
   /// 手機活動卡頂部白邊（0.15cm）
@@ -686,7 +688,7 @@ class _ActivityPageState extends State<ActivityPage> {
         clipBehavior: Clip.antiAlias,
         color: Colors.white,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(10, 10, 10, _detailBottomGap1cmPx),
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, _wideCardBottomPaddingPx),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
