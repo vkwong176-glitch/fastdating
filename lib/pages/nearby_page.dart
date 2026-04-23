@@ -22,6 +22,7 @@ import '../services/chat_firestore_service.dart';
 import '../services/chat_quota_service.dart';
 import '../widgets/gender_filter.dart';
 import '../widgets/main_tab_app_bar.dart';
+import '../widgets/pressable_opacity.dart';
 import '../widgets/chat_quota_gate.dart';
 import '../services/firebase_bootstrap.dart';
 import 'chat_detail_page.dart';
@@ -666,6 +667,63 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
     }
   }
 
+  /// 與首頁相同：搜尋列下方之全寬「篩選」橫條（自 AppBar 主色圓鈕改為此處）。
+  Widget _buildNearbyFilterBar(LanguageProvider langProvider) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: Opacity(
+        opacity: _loading ? 0.55 : 1.0,
+        child: PressableOpacity(
+          onPressed: _loading ? null : _openFilter,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF9C4),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: AppConstants.primaryColor,
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppConstants.primaryColor.withValues(alpha: 0.2),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.filter_list,
+                  size: 22,
+                  color: AppConstants.primaryColor,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    langProvider.getString('filter'),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppConstants.primaryColor,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right,
+                  color: AppConstants.primaryColor,
+                  size: 22,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// 名稱行右側：淺底、主色邊的「邀請聊天」樣式；整體尺寸為原設計 150%。
   Widget _buildNearbyInviteChatPill(VoidCallback onPressed) {
     return OutlinedButton(
@@ -712,12 +770,6 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
         ),
         actions: [
           MainTabAppBar.buildCircleActionButton(
-            icon: Icons.filter_list,
-            onPressed: _loading ? null : _openFilter,
-            tooltip: '篩選',
-          ),
-          const SizedBox(width: MainTabAppBar.actionGap),
-          MainTabAppBar.buildCircleActionButton(
             icon: Icons.refresh,
             onPressed: _loading ? null : _load,
             tooltip: '重新整理',
@@ -725,72 +777,80 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
         ],
       ),
       backgroundColor: AppConstants.backgroundColor,
-      body: _loading
-          ? const Center(
-              child:
-                  CircularProgressIndicator(color: AppConstants.primaryColor))
-          : _error != null && _users.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '無法載入附近的人',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: AppConstants.grey,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildNearbyFilterBar(langProvider),
+          Expanded(
+            child: _loading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                        color: AppConstants.primaryColor))
+                : _error != null && _users.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '無法載入附近的人',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: AppConstants.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: _load,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppConstants.primaryColor,
+                                ),
+                                child: const Text('重試'),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _load,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppConstants.primaryColor,
-                          ),
-                          child: const Text('重試'),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : _filteredUsers.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _users.isEmpty ? '目前附近沒有用戶' : '篩選後無符合的用戶',
-                            style: TextStyle(color: AppConstants.grey),
-                          ),
-                          if (_users.isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            TextButton(
-                              onPressed: _openFilter,
-                              child: const Text('調整篩選條件'),
+                      )
+                    : _filteredUsers.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _users.isEmpty
+                                      ? '目前附近沒有用戶'
+                                      : '篩選後無符合的用戶',
+                                  style: TextStyle(color: AppConstants.grey),
+                                ),
+                                if (_users.isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  TextButton(
+                                    onPressed: _openFilter,
+                                    child: const Text('調整篩選條件'),
+                                  ),
+                                ],
+                              ],
                             ),
-                          ],
-                        ],
-                      ),
-                    )
-                  : Builder(
-                      builder: (context) {
-                        final hideAds = context
-                            .watch<SubscriptionProvider>()
-                            .shouldHideInFeedAdPromotions;
-                        final promotionPosts = hideAds
-                            ? <UserPostItem>[]
-                            : Provider.of<FeedProvider>(context).userPosts;
-                        final mergedUsers = _mergePromotionAdsIntoNearby(
-                          _filteredUsers,
-                          promotionPosts,
-                        );
-                        return ListView.builder(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          itemCount: mergedUsers.length,
-                          itemBuilder: (context, index) {
+                          )
+                        : Builder(
+                            builder: (context) {
+                              final hideAds = context
+                                  .watch<SubscriptionProvider>()
+                                  .shouldHideInFeedAdPromotions;
+                              final promotionPosts = hideAds
+                                  ? <UserPostItem>[]
+                                  : Provider.of<FeedProvider>(context)
+                                      .userPosts;
+                              final mergedUsers = _mergePromotionAdsIntoNearby(
+                                _filteredUsers,
+                                promotionPosts,
+                              );
+                              return ListView.builder(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
+                                itemCount: mergedUsers.length,
+                                itemBuilder: (context, index) {
                             final user = mergedUsers[index];
                             if (user['isPromotionAd'] == true) {
                               final promotion =
@@ -976,6 +1036,9 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
                         );
                       },
                     ),
+          ),
+        ],
+      ),
     );
   }
 }
