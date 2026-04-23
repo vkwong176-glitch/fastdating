@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../utils/constants.dart';
 import '../utils/responsive_layout.dart';
@@ -438,22 +439,19 @@ class _LoginPageState extends State<LoginPage> {
           if (showTitleOverlay)
             Positioned(
               right: 12 * s,
-              bottom: 10 * s,
+              bottom: 8 * s,
               child: Text(
                 'HK LOVE EASY',
                 textAlign: TextAlign.right,
-                // 避免 Web 另行下載 Google Fonts，加快首屏與登入頁可互動時間
-                style: TextStyle(
-                  fontFamily: 'Georgia',
-                  fontFamilyFallback: const ['Times New Roman', 'serif'],
-                  fontSize: (isWide ? 30.0 : 22.0) * s,
-                  fontWeight: FontWeight.w700,
-                  fontStyle: FontStyle.italic,
+                // 草寫風格（與品牌橫條圖上字樣風格一致）；Web 由 google_fonts 子集載入
+                style: GoogleFonts.greatVibes(
+                  fontSize: (isWide ? 40.0 : 30.0) * s,
+                  fontWeight: FontWeight.w400,
                   color: isWide
                       ? const Color(0xFFB71C1C)
-                      : const Color(0xFF3E2723),
-                  letterSpacing: 0.6,
-                  height: 1.05,
+                      : const Color(0xFF2C1810),
+                  letterSpacing: 0.8,
+                  height: 1.0,
                   shadows: [
                     Shadow(
                       color: Colors.white.withValues(alpha: 0.92),
