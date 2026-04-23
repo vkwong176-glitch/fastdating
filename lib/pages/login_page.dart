@@ -421,7 +421,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  /// 頂圖右下角：草寫風「HK LOVE EASY」（依 [showTitleOverlay]；與品牌參考圖位置／手寫體對齊）。
+  /// 頂圖右下角：草寫風「HK LOVE EASY」（依 [showTitleOverlay]；黑字、約縮 0.1cm）。
   Widget _buildLoginBannerWithOverlay({
     required double height,
     required bool isWide,
@@ -429,23 +429,23 @@ class _LoginPageState extends State<LoginPage> {
     bool showTitleOverlay = true,
   }) {
     final s = _loginUiScale;
-    // 參考設計：右下角、手寫草寫體、白字＋輪廓陰影（夕陽底圖上可讀）
-    final baseFs = (isWide ? 34.0 : 28.0) * s;
+    // 右下角、Pacifico 草寫；字級再縮約 0.1cm；黑字＋淡白陰影（夕陽底圖可讀）
+    final baseFs = (isWide ? 34.0 : 28.0) * s - 0.1 * AppConstants.logicalPxPerCm;
     final titleStyle = GoogleFonts.pacifico(
       fontSize: baseFs,
-      color: Colors.white,
+      color: Colors.black,
       letterSpacing: 0.4,
       height: 1.0,
       shadows: [
         Shadow(
-          color: Colors.black.withValues(alpha: 0.45),
-          offset: const Offset(1, 1),
-          blurRadius: 3,
+          color: Colors.white.withValues(alpha: 0.75),
+          offset: const Offset(0, 0),
+          blurRadius: 2,
         ),
         Shadow(
-          color: Colors.black.withValues(alpha: 0.2),
-          offset: const Offset(0, 0),
-          blurRadius: 6,
+          color: Colors.white.withValues(alpha: 0.35),
+          offset: const Offset(0, 0.5),
+          blurRadius: 1,
         ),
       ],
     );
