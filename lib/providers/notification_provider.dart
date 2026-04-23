@@ -14,7 +14,7 @@ class MessageNotificationItem {
   });
 }
 
-/// APP 內通知相關狀態與待顯示通知（推播音效由系統處理；新訊息列表偵測時可播短提示音）
+/// APP 內通知相關狀態與待顯示通知（推播音效由系統處理；新訊息列表偵測時 Android 播系統預設通知鈴聲）
 class NotificationProvider with ChangeNotifier {
   static const _kHeartNotification = 'notif_heart';
   static const _kMessageSound = 'notif_message_sound';
@@ -26,7 +26,7 @@ class NotificationProvider with ChangeNotifier {
 
   bool get heartNotification => _heartNotification;
 
-  /// 訊息列表偵測到對方新訊息時是否播放短提示音（預設開啟）。
+  /// 訊息列表偵測到對方新訊息時是否播放提示（預設開；Android 為系統預設通知鈴聲）。
   bool get messageSoundEnabled => _messageSoundEnabled;
 
   Future<void> loadFromPrefs() async {

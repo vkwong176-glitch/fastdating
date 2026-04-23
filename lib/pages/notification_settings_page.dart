@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -51,6 +52,18 @@ class NotificationSettingsPage extends StatelessWidget {
               ),
             ],
           ),
+          if (kIsWeb)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 10, 4, 0),
+              child: Text(
+                lang.getString('notif_new_message_sound_footnote_web'),
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.35,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
         ],
       ),
     );

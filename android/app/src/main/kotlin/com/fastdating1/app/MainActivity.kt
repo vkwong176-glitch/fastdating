@@ -7,6 +7,9 @@ import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.media.RingtoneManager
+import android.net.Uri
+import android.media.Ringtone
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -31,6 +34,36 @@ class MainActivity : FlutterActivity() {
             } else {
                 result.notImplemented()
             }
+        }
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "app.message_sound",
+        ).setMethodCallHandler { call, result ->
+            if (call.method == "playDefaultNotification") {
+                playDefaultNotificationSound()
+                result.success(null)
+            } else {
+                result.notImplemented()
+            }
+        }
+    }
+
+    /**
+     * 與 [RingtoneManager.TYPE_NOTIFICATION] 一致：用戶在系統內建「預設通知鈴聲／訊息」所選之聲音（依廠商可能略有差異）。
+     */
+    private fun playDefaultNotificationSound() {
+        try {
+            val uri: Uri? = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            if (uri == null) {
+                return
+            }
+            val ringtone: Ringtone? = RingtoneManager.getRingtone(applicationContext, uri)
+            if (ringtone == null) {
+                return
+            }
+            ringtone.play()
+        } catch (e: Exception) {
+            // 靜默失敗：部分裝置或權限下 Ringtone 不可用
         }
     }
 

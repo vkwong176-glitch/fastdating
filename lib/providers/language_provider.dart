@@ -152,6 +152,8 @@ class LanguageProvider with ChangeNotifier {
     'notif_section_background': '背景通知',
     'notif_heart_enabled': '按心通知',
     'notif_new_message_sound': '新訊息通知',
+    'notif_new_message_sound_footnote_web':
+        'Android App 與你手機系統「預設通知」鈴聲一致。網頁版因瀏覽器限制，無法與內建訊息鈴聲完全相同。',
     'display': '顯示',
     'account': '帳戶',
     'about': '關於 Fast Dating',
@@ -758,6 +760,8 @@ class LanguageProvider with ChangeNotifier {
     'notif_section_background': '背景通知',
     'notif_heart_enabled': '按心通知',
     'notif_new_message_sound': '新消息通知',
+    'notif_new_message_sound_footnote_web':
+        'Android 应用会使用手机系统「默认通知」铃声。网页版因浏览器限制，无法与内置信息铃声完全相同。',
     'display': '显示',
     'account': '账户',
     'about': '关于 Fast Dating',
@@ -1361,6 +1365,8 @@ class LanguageProvider with ChangeNotifier {
     'notif_section_background': 'Background notifications',
     'notif_heart_enabled': 'Heart notifications',
     'notif_new_message_sound': 'New message notifications',
+    'notif_new_message_sound_footnote_web':
+        'The Android app uses your system default notification sound. In mobile browsers, the same tone cannot be guaranteed.',
     'display': 'Display',
     'account': 'Account',
     'about': 'About Fast Dating',

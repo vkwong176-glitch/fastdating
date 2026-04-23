@@ -1,6 +1,7 @@
 import 'package:web/web.dart' as web;
 
-/// Web：Web Audio 短提示音（系統內 [SystemSound] 於網頁為 no-op）。
+/// Web：瀏覽器**無法**播放與手機內建「訊息」或系統**同一條**通知鈴聲，僅能以 Web Audio 作短提示。
+/// 與內建鈴聲完全一致請使用 **Android／iOS App**；若需與 FCM 相同聲音，可依賴系統推播（非本頁內偵測路徑）。
 Future<void> playNewMessageNotificationSound() async {
   try {
     final ctx = web.AudioContext();
