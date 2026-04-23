@@ -16,7 +16,7 @@ import 'admin_dashboard_page.dart';
 import 'admin_login_page.dart';
 
 /// 登入頁（依手機版設計）
-/// 上：日落漸層 + 紅心與雙人剪影 + 右下「HK LOVE EASY」（Pacifico 草寫）
+/// 上：日落漸層 + 紅心與雙人剪影 + 「HK LOVE EASY」（Pacifico 草寫、黑字）
 /// 下：米白表單（Email、Password、Sign In、Google）、響應式手機 / iPad / 電腦
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -421,7 +421,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  /// 頂圖右下角：草寫風「HK LOVE EASY」（依 [showTitleOverlay]；黑字、約縮 0.1cm）。
+  /// 頂圖／橫條內：草寫風「HK LOVE EASY」（依 [showTitleOverlay]；黑字、字級可縮 0.2cm）。
   Widget _buildLoginBannerWithOverlay({
     required double height,
     required bool isWide,
@@ -429,8 +429,9 @@ class _LoginPageState extends State<LoginPage> {
     bool showTitleOverlay = true,
   }) {
     final s = _loginUiScale;
-    // 右下角、Pacifico 草寫；字級再縮約 0.1cm；黑字＋淡白陰影（夕陽底圖可讀）
-    final baseFs = (isWide ? 34.0 : 28.0) * s - 0.1 * AppConstants.logicalPxPerCm;
+    // 手寫草寫體；字級縮 0.2cm；黑字（橙條／頂圖上可讀，輕微白邊陰影）
+    final baseFs = (((isWide ? 34.0 : 28.0) * s) - 0.2 * AppConstants.logicalPxPerCm)
+        .clamp(14.0, 120.0);
     final titleStyle = GoogleFonts.pacifico(
       fontSize: baseFs,
       color: Colors.black,
@@ -438,14 +439,9 @@ class _LoginPageState extends State<LoginPage> {
       height: 1.0,
       shadows: [
         Shadow(
-          color: Colors.white.withValues(alpha: 0.75),
-          offset: const Offset(0, 0),
-          blurRadius: 2,
-        ),
-        Shadow(
-          color: Colors.white.withValues(alpha: 0.35),
+          color: Colors.white.withValues(alpha: 0.55),
           offset: const Offset(0, 0.5),
-          blurRadius: 1,
+          blurRadius: 2,
         ),
       ],
     );
