@@ -80,6 +80,14 @@ String? _stripCounterInviteHashtag(String? hashtags) {
   return parts.isEmpty ? null : parts;
 }
 
+/// 邀聊通知「不同人發佈嘅貼文」：只顯示 [UserPostItem.createdAtUtc] 在過去 7 天內之貼文（UTC 比對）。
+bool _publishFeedPostWithinLastWeek(UserPostItem p) {
+  final t = p.createdAtUtc;
+  if (t == null) return false;
+  final cutoff = DateTime.now().toUtc().subtract(const Duration(days: 7));
+  return !t.isBefore(cutoff);
+}
+
 /// 會員端顯示：舊資料標籤「#宣傳貼文」改為「#廣告」。
 String? _formatAdHashtagsForDisplay(String? hashtags) {
   final s = _stripCounterInviteHashtag(hashtags);
@@ -418,14 +426,17 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
           builder: (context) {
             final allPosts =
                 Provider.of<FeedProvider>(context).userPosts;
+            final weekPosts = allPosts
+                .where(_publishFeedPostWithinLastWeek)
+                .toList();
             final hideAds = context
                 .watch<SubscriptionProvider>()
                 .shouldHideInFeedAdPromotions;
             final promotionPosts = hideAds
                 ? <UserPostItem>[]
-                : allPosts.where((p) => p.isAdPromotion).toList();
+                : weekPosts.where((p) => p.isAdPromotion).toList();
             final normalPosts =
-                allPosts.where((p) => !p.isAdPromotion).toList();
+                weekPosts.where((p) => !p.isAdPromotion).toList();
             final posts =
                 mergePromotionItems<UserPostItem, UserPostItem>(
               items: normalPosts,
