@@ -16,7 +16,7 @@ import 'admin_dashboard_page.dart';
 import 'admin_login_page.dart';
 
 /// 登入頁（依手機版設計）
-/// 上：日落漸層 + 紅心與雙人剪影 + 「HK LOVE EASY」
+/// 上：日落漸層 + 紅心與雙人剪影 + 右下「HK LOVE EASY」（Pacifico 草寫）
 /// 下：米白表單（Email、Password、Sign In、Google）、響應式手機 / iPad / 電腦
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -421,7 +421,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  /// 頂圖右下角：撩草「HK LOVE EASY」（依 [showTitleOverlay]）。
+  /// 頂圖右下角：草寫風「HK LOVE EASY」（依 [showTitleOverlay]；與品牌參考圖位置／手寫體對齊）。
   Widget _buildLoginBannerWithOverlay({
     required double height,
     required bool isWide,
@@ -429,6 +429,26 @@ class _LoginPageState extends State<LoginPage> {
     bool showTitleOverlay = true,
   }) {
     final s = _loginUiScale;
+    // 參考設計：右下角、手寫草寫體、白字＋輪廓陰影（夕陽底圖上可讀）
+    final baseFs = (isWide ? 34.0 : 28.0) * s;
+    final titleStyle = GoogleFonts.pacifico(
+      fontSize: baseFs,
+      color: Colors.white,
+      letterSpacing: 0.4,
+      height: 1.0,
+      shadows: [
+        Shadow(
+          color: Colors.black.withValues(alpha: 0.45),
+          offset: const Offset(1, 1),
+          blurRadius: 3,
+        ),
+        Shadow(
+          color: Colors.black.withValues(alpha: 0.2),
+          offset: const Offset(0, 0),
+          blurRadius: 6,
+        ),
+      ],
+    );
     return SizedBox(
       width: double.infinity,
       height: height,
@@ -438,33 +458,12 @@ class _LoginPageState extends State<LoginPage> {
           Positioned.fill(child: image),
           if (showTitleOverlay)
             Positioned(
-              right: 12 * s,
-              bottom: 8 * s,
+              right: 14 * s,
+              bottom: 12 * s,
               child: Text(
                 'HK LOVE EASY',
                 textAlign: TextAlign.right,
-                // 草寫風格（與品牌橫條圖上字樣風格一致）；Web 由 google_fonts 子集載入
-                style: GoogleFonts.greatVibes(
-                  fontSize: (isWide ? 40.0 : 30.0) * s,
-                  fontWeight: FontWeight.w400,
-                  color: isWide
-                      ? const Color(0xFFB71C1C)
-                      : const Color(0xFF2C1810),
-                  letterSpacing: 0.8,
-                  height: 1.0,
-                  shadows: [
-                    Shadow(
-                      color: Colors.white.withValues(alpha: 0.92),
-                      blurRadius: 8,
-                      offset: const Offset(0, 0),
-                    ),
-                    Shadow(
-                      color: Colors.black.withValues(alpha: 0.22),
-                      blurRadius: 3,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
-                ),
+                style: titleStyle,
               ),
             ),
         ],
