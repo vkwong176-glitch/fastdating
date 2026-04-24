@@ -43,8 +43,11 @@ class FeedFirestoreService {
 
   static const int _maxImageBytesForFirestore = 450000;
 
-  /// 公開邀聊貼文保留時間（超過則自列表隱藏並由 [deleteExpiredPublicFeedPosts] 自資料庫刪除）。
-  static const Duration publicFeedRetention = Duration(hours: 24);
+  /// 公開 Feeds 會員貼文保留時間：訊息頁等共用遠端列表可見、並由 [deleteExpiredPublicFeedPosts] 刪除逾時筆；宣傳貼文不在此日期規則內（見 [isWithinPublicFeedRetention]）。
+  static const Duration publicFeedRetention = Duration(days: 30);
+
+  /// 邀聊通知頁「不同人發佈嘅貼文」可見之會員貼文時間範圍（短於 [publicFeedRetention]；宣傳貼文不以此欄隱藏）。
+  static const Duration publishFeedVisibleRetention = Duration(days: 7);
 
   DateTime _addMonthsUtc(DateTime baseUtc, int months) {
     final utc = baseUtc.toUtc();
@@ -68,7 +71,7 @@ class FeedFirestoreService {
     );
   }
 
-  /// 是否仍在邀聊通知公開列表保留期內（無 [UserPostItem.createdAtUtc] 的舊資料仍顯示）。
+  /// 是否仍在公開遠端列表 [publicFeedRetention] 內；宣傳貼文略過此日期篩選（依發佈／過期邏輯）；（無 [UserPostItem.createdAtUtc] 的舊一般貼文仍顯示）。
   static bool isWithinPublicFeedRetention(UserPostItem p) {
     if (p.isAdPromotion) return true;
     final t = p.createdAtUtc;

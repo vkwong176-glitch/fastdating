@@ -80,11 +80,14 @@ String? _stripCounterInviteHashtag(String? hashtags) {
   return parts.isEmpty ? null : parts;
 }
 
-/// 邀聊通知「不同人發佈嘅貼文」：只顯示 [UserPostItem.createdAtUtc] 在過去 7 天內之貼文（UTC 比對）。
+/// 邀聊通知「不同人發佈嘅貼文」：僅 [FeedFirestoreService.publishFeedVisibleRetention] 內之會員貼文；宣傳貼文不以此日期欄隱藏。
 bool _publishFeedPostWithinLastWeek(UserPostItem p) {
+  if (p.isAdPromotion) return true;
   final t = p.createdAtUtc;
   if (t == null) return false;
-  final cutoff = DateTime.now().toUtc().subtract(const Duration(days: 7));
+  final cutoff = DateTime.now()
+      .toUtc()
+      .subtract(FeedFirestoreService.publishFeedVisibleRetention);
   return !t.isBefore(cutoff);
 }
 
@@ -480,20 +483,6 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
               ],
             );
           },
-        ),
-        const SizedBox(height: 12),
-        _buildPostCard(
-          desktopFs: desktopFs,
-          postId: 'p1',
-          name: 'POOLD',
-          tag: '貼文',
-          content: '遊車河聽CD 吹海風睇夜景',
-          hashtags: '#180橫膊胸肌人魚線 #白淨斯文肌肉 #車河',
-          iconColor: AppConstants.primaryColor,
-          userId: 'p1',
-          viewCount: 128,
-          mockPost: true,
-          timeLabel: '示範 · 2025/04/01 14:30',
         ),
       ],
     );

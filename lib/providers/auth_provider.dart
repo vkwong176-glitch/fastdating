@@ -467,6 +467,13 @@ class AuthProvider with ChangeNotifier {
         }
       }
       return await _finalizeOAuthSignIn(cred);
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        return null;
+      }
+      return e.message;
+    } on SignInWithAppleNotSupportedException catch (e) {
+      return e.message;
     } on FirebaseAuthException catch (e) {
       return _firebaseAuthMessage(e);
     } catch (e, st) {

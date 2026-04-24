@@ -58,13 +58,46 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
-  <!-- 解除舊版 Service Worker，否則瀏覽器可能持續執行舊 main.dart.js（版面與管理員登入不會更新） -->
+  <!-- 只解除舊版 Flutter 快取用 SW，勿取消 firebase-messaging-sw（否則關站／關分頁時收唔到帶聲 FCM 推播） -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function (regs) {
-        for (var i = 0; i < regs.length; i++) regs[i].unregister();
+        for (var i = 0; i < regs.length; i++) {
+          var r = regs[i];
+          var url = (r.active && r.active.scriptURL) || (r.waiting && r.waiting.scriptURL) || '';
+          if (url.indexOf('firebase-messaging-sw') >= 0) continue;
+          r.unregister();
+        }
       });
     }
+  </script>
+  <!-- 行動版 Safari 需用「使用者手勢」解鎖 Web Audio，否則新訊息短提示冇聲；與 [lib/utils/new_message_sound_web.dart] 共用 window.__fdMsgAudioCtx。 -->
+  <script>
+    (function () {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      var unlocked = false;
+      function onFirstPointer() {
+        if (unlocked) return;
+        try {
+          var ctx = window.__fdMsgAudioCtx;
+          if (!ctx) {
+            ctx = new AC();
+            window.__fdMsgAudioCtx = ctx;
+          }
+          if (ctx.state === 'suspended' && ctx.resume) {
+            ctx.resume();
+          }
+        } catch (e) {}
+        unlocked = true;
+        document.removeEventListener('pointerdown', onFirstPointer, true);
+        document.removeEventListener('click', onFirstPointer, true);
+        document.removeEventListener('touchend', onFirstPointer, true);
+      }
+      document.addEventListener('pointerdown', onFirstPointer, true);
+      document.addEventListener('click', onFirstPointer, true);
+      document.addEventListener('touchend', onFirstPointer, true);
+    })();
   </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.

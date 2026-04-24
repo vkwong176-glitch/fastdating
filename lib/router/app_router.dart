@@ -96,6 +96,10 @@ String? _globalRedirect(BuildContext context, GoRouterState state) {
   if (path == '/subscription') {
     return '/subscription/fast-dating-1';
   }
+  /// 短網址（行銷／外連用）→ 訂閱方案說明頁（與全站 [SubscriptionPage] 一致，Web 仍為手動付款；App 內走 IAP）
+  if (path == '/l') {
+    return '/subscription/fast-dating-1';
+  }
   if (path == '/main') {
     return '/home';
   }

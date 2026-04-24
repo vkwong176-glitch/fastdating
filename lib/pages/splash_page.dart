@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
@@ -268,18 +269,17 @@ class _SplashPageState extends State<SplashPage> {
     final title = Text(
       'HK LOVE EASY',
       textAlign: TextAlign.center,
-      style: TextStyle(
-        fontSize: 40,
-        fontWeight: FontWeight.w500,
-        fontStyle: FontStyle.italic,
+      style: GoogleFonts.cinzel(
+        fontSize: 36,
+        fontWeight: FontWeight.w600,
         color: Colors.white,
-        letterSpacing: 2.0,
-        height: 1.3,
+        letterSpacing: 2.2,
+        height: 1.25,
         shadows: [
           Shadow(
-            color: Colors.black.withValues(alpha: 0.25),
+            color: Colors.black.withValues(alpha: 0.35),
             offset: const Offset(0, 1),
-            blurRadius: 4,
+            blurRadius: 5,
           ),
         ],
       ),

@@ -1,8 +1,10 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../utils/constants.dart';
 import '../utils/responsive_layout.dart';
 import '../widgets/pressable_opacity.dart';
@@ -16,7 +18,7 @@ import 'admin_dashboard_page.dart';
 import 'admin_login_page.dart';
 
 /// 登入頁（依手機版設計）
-/// 上：日落漸層 + 紅心與雙人剪影 + 「HK LOVE EASY」（Pacifico 草寫、黑字）
+/// 上：日落漸層 + 紅心與雙人剪影 + 「HK LOVE EASY」（Cinzel 羅馬顯示體、黑字）
 /// 下：米白表單（Email、Password、Sign In、Google）、響應式手機 / iPad / 電腦
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -185,6 +187,30 @@ class _LoginPageState extends State<LoginPage> {
     }
     if (!mounted) return;
     _goToMain();
+  }
+
+  /// 僅在 iOS／macOS 顯示（符合 App 審查指南 4.8：在提供第三方帳戶登入的 App 上須同時提供「使用 Apple 登入」）。
+  bool get _showSignInWithApple {
+    if (kIsWeb) return false;
+    return defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+  }
+
+  Future<void> _signInWithApple() async {
+    if (_oauthBusy) return;
+    setState(() => _oauthBusy = true);
+    try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final err = await auth.signInWithApple();
+      if (!mounted) return;
+      if (err != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+        return;
+      }
+      _goToMain();
+    } finally {
+      if (mounted) setState(() => _oauthBusy = false);
+    }
   }
 
   Future<void> _signInWithGoogle() async {
@@ -421,7 +447,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  /// 頂圖／橫條內：草寫風「HK LOVE EASY」（依 [showTitleOverlay]；黑字、字級可縮 0.2cm）。
+  /// 頂圖／橫條內：羅馬顯示體「HK LOVE EASY」（依 [showTitleOverlay]；黑字、字級可縮 0.2cm）。
   Widget _buildLoginBannerWithOverlay({
     required double height,
     required bool isWide,
@@ -429,19 +455,20 @@ class _LoginPageState extends State<LoginPage> {
     bool showTitleOverlay = true,
   }) {
     final s = _loginUiScale;
-    // 手寫草寫體；字級縮 0.2cm；黑字（橙條／頂圖上可讀，輕微白邊陰影）
-    final baseFs = (((isWide ? 34.0 : 28.0) * s) - 0.2 * AppConstants.logicalPxPerCm)
-        .clamp(14.0, 120.0);
-    final titleStyle = GoogleFonts.pacifico(
+    // Cinzel 羅馬顯示體（取代草寫）；字級略縮以配合橫劃寬；黑字＋淺陰影保險在橙條上可讀
+    final baseFs = (((isWide ? 32.0 : 26.0) * s) - 0.2 * AppConstants.logicalPxPerCm)
+        .clamp(12.0, 110.0);
+    final titleStyle = GoogleFonts.cinzel(
       fontSize: baseFs,
+      fontWeight: FontWeight.w600,
       color: Colors.black,
-      letterSpacing: 0.4,
-      height: 1.0,
+      letterSpacing: 1.6,
+      height: 1.05,
       shadows: [
         Shadow(
-          color: Colors.white.withValues(alpha: 0.55),
+          color: Colors.white.withValues(alpha: 0.6),
           offset: const Offset(0, 0.5),
-          blurRadius: 2,
+          blurRadius: 2.5,
         ),
       ],
     );
@@ -613,6 +640,19 @@ class _LoginPageState extends State<LoginPage> {
           SizedBox(height: 16 * s),
           _buildDivider(),
           SizedBox(height: 14 * s),
+          if (_showSignInWithApple) ...[
+            SignInWithAppleButton(
+              text: '使用 Apple 登入',
+              height: 46 * s,
+              borderRadius: BorderRadius.circular(14 * s),
+              onPressed: _oauthBusy
+                  ? null
+                  : () {
+                      _signInWithApple();
+                    },
+            ),
+            SizedBox(height: 12 * s),
+          ],
           _buildSocialButton(
             icon: Icons.g_mobiledata_rounded,
             label: 'Continue with Google',

@@ -1,7 +1,9 @@
 import 'dart:async' show unawaited;
 import 'dart:typed_data';
 
+
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/feed_provider.dart';
 import '../providers/subscription_provider.dart';
@@ -667,6 +669,62 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
     }
   }
 
+  /// 與首頁頂端提示欄風格一致：燈泡圖＋說明＋「想講～」捷徑（文字見 [LanguageProvider] `nearby_top_tip_body`）。
+  Widget _buildNearbyTopTip(LanguageProvider lang) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF3E0),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: AppConstants.primaryColor,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 2),
+              child: Icon(
+                Icons.tips_and_updates_outlined,
+                color: AppConstants.primaryColor,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                lang.getString('nearby_top_tip_body'),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                  height: 1.35,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: () => context.go('/talking'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: AppConstants.primaryColor,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                minimumSize: const Size(0, 36),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text('想講～'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// 與首頁相同：搜尋列下方之全寬「篩選」橫條（自 AppBar 主色圓鈕改為此處）。
   Widget _buildNearbyFilterBar(LanguageProvider langProvider) {
     return Padding(
@@ -780,6 +838,7 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          _buildNearbyTopTip(langProvider),
           _buildNearbyFilterBar(langProvider),
           Expanded(
             child: _loading

@@ -49,13 +49,38 @@
 - 實測刪除帳戶流程
 - 至少做一次 internal testing / closed testing
 
-## 目前缺口
+## 產出 AAB（本機）
 
-- 這台機器尚未安裝 Android SDK
-- `sdkmanager` 目前不存在
-- `java -version` 目前找不到 Java Runtime
-- `/Users/vickywong/Library/Android/sdk` 目前不存在
-- 因此目前還不能在這台機器正式輸出 `APK` / `AAB`
+```bash
+chmod +x build_android_release.sh
+./build_android_release.sh
+```
+
+成功後檔案路徑：`build/app/outputs/bundle/release/app-release.aab`
+
+### 簽署失敗：`keystore password was incorrect`
+
+1. 確認 `android/key.properties` 內 `storePassword`、`keyPassword` 與建立 `.jks` 時輸入的密碼一致（常見錯誤：多餘空白、複製貼上帶換行）。
+2. 確認 `storeFile` 路徑正確且指向你要用的 keystore。
+3. 若曾啟用 **Google Play App Signing**，上傳用的 **upload key** 必須與 Play Console「應用程式簽署」頁所登記的憑證一致；若忘記密碼，需在 Play Console 申請 **upload key 重設**（Google 文件有流程），不可隨便換一個新 jks 假裝同一組。
+
+---
+
+## Google Play Console 上架流程（摘要）
+
+1. **建立應用程式**（若尚未建立）：同一 `applicationId`（`com.fastdating1.app`）全生命週期不可改。
+2. **應用程式內容**：完成隱私政策 URL、應用程式存取權限說明、廣告／內容分級問卷、目標對象與安全（Data safety）。
+3. **商店資訊**：名稱、簡短說明、完整說明、圖示、功能圖、螢幕截圖（手機／平板若需）、聯絡 email。
+4. **版本**：上傳 **AAB**（不要只上傳 APK 作為唯一正式版本，商店以 AAB 為優先）。每次上傳須 **遞增** `pubspec.yaml` 的 `version` 中 `+` 後面的 **versionCode**（例如 `1.0.1+2` → 下次 `1.0.2+3`）。
+5. **測試軌道**：建議先走 **內部測試** → **封閉測試** → 再送 **正式版**。
+6. **Firebase**：若使用 Google 登入／FCM，請在 Firebase 專案內加入 **release** 憑證的 **SHA-1 / SHA-256**（Play App Signing 憑證指紋可在 Play Console → 版本 → 應用程式簽署 取得）。
+
+---
+
+## 目前缺口（請本機自行確認）
+
+- `flutter doctor -v` 中 Android toolchain 須為可用狀態。
+- 正式 keystore 與 `key.properties` 密碼須正確，否則 `flutter build appbundle --release` 會在 `signReleaseBundle` 失敗。
 
 ## 備註
 

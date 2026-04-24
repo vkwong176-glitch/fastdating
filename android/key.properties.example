@@ -1,4 +1,9 @@
+# 複製為 android/key.properties（已列於 .gitignore，勿提交）
+# 密碼須與建立 .jks 時完全一致；若報 "keystore password was incorrect" 請逐字檢查、勿含前後空白。
+# 若密碼含 #、= 等特殊字元導致讀檔錯誤，可改在終端僅在建置當下設定（環境變數優先於本檔）：
+#   export FD_STORE_PASSWORD='你的庫密碼'
+#   export FD_KEY_PASSWORD='你的金鑰密碼'   # PKCS12 常與庫密碼相同時可省略，會沿用 FD_STORE_PASSWORD
 storePassword=REPLACE_WITH_STORE_PASSWORD
 keyPassword=REPLACE_WITH_KEY_PASSWORD
 keyAlias=upload
-storeFile=/absolute/path/to/your-release-keystore.jks
+storeFile=/absolute/path/to/your-upload-key.jks

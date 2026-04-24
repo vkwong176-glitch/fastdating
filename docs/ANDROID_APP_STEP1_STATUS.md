@@ -30,22 +30,14 @@
 ## 目前狀態
 
 - `android/key.properties`
-  - 已存在，並已指向本機 keystore 路徑
+  - 已存在，並已指向本機 keystore 路徑；**若密碼與 .jks 不符，`flutter build appbundle --release` 會失敗**，請依 `docs/ANDROID_RELEASE_PRECHECK.md` 修正。
 - Android 建置環境
-  - `flutter doctor -v` 已確認 Flutter 可用
-  - 目前缺少 Android SDK
-  - `sdkmanager` 尚未安裝
-  - `java -version` 目前找不到 Java Runtime
-- Android 真機 / APK 建置驗證
-  - 目前這台機器尚未具備完整 Android build 環境，未能在此直接 build 驗證
+  - 以本機 `flutter doctor -v` 為準；需能成功執行 `flutter build appbundle --release`
+- 正式出包
+  - 使用專案根目錄 `./build_android_release.sh` 產出 `app-release.aab` 供 Google Play 上傳
 
-## 你要提供給下一步的資料
+## 下一步（上架）
 
-1. Android release 實機建置驗證
-   - 先補齊本機 Android SDK / Java / Gradle 環境
-   - 用正式 signing 做一次 release build 驗證
-
-## 下一步會做
-
-1. 安裝或接通 Android SDK 後做 release build 驗證
-2. 依 `docs/ANDROID_RELEASE_PRECHECK.md` 完成 Play 上架前檢查
+1. 修正 `key.properties` 密碼或與 Play App Signing 一致的 upload keystore
+2. 執行 `./build_android_release.sh`，上傳產生之 AAB 至 Play Console
+3. 依 `docs/ANDROID_RELEASE_PRECHECK.md` 完成商店資料與審核項目

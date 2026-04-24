@@ -109,6 +109,15 @@
         ]
       },
       {
+        "source": "firebase-messaging-sw.js",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate, max-age=0"
+          }
+        ]
+      },
+      {
         "source": "flutter.js",
         "headers": [
           {
@@ -171,7 +180,7 @@
         ]
       },
       {
-        "source": "/@(login|signup|main|home|messages|publish|plans|nearby|talking|subscribed-plan|purchase-history|activity-record|event-proposal|faq|about|contact|terms|advertising)",
+        "source": "/@(login|signup|main|home|messages|publish|plans|nearby|talking|subscribed-plan|purchase-history|activity-record|event-proposal|faq|about|contact|terms|advertising|l)",
         "headers": [
           {
             "key": "Cache-Control",

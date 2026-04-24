@@ -1,5 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../services/firebase_bootstrap.dart';
+import '../services/user_firestore_service.dart';
 
 /// 一則待顯示的訊息通知
 class MessageNotificationItem {
@@ -37,6 +42,12 @@ class NotificationProvider with ChangeNotifier {
       _messageSoundEnabled = p.getBool(_kMessageSound) ?? true;
       _prefsLoaded = true;
       notifyListeners();
+      if (FirebaseBootstrap.isReady) {
+        unawaited(
+          UserFirestoreService.instance
+              .syncNotifNewMessagePushToServer(_messageSoundEnabled),
+        );
+      }
     } catch (_) {
       _prefsLoaded = true;
     }
@@ -47,6 +58,12 @@ class NotificationProvider with ChangeNotifier {
       final p = await SharedPreferences.getInstance();
       await p.setBool(_kHeartNotification, _heartNotification);
       await p.setBool(_kMessageSound, _messageSoundEnabled);
+      if (FirebaseBootstrap.isReady) {
+        unawaited(
+          UserFirestoreService.instance
+              .syncNotifNewMessagePushToServer(_messageSoundEnabled),
+        );
+      }
     } catch (_) {}
   }
 

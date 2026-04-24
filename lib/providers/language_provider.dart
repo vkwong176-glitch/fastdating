@@ -174,7 +174,9 @@ class LanguageProvider with ChangeNotifier {
     'match_success': '配對成功！',
     'chat_now': '立即聊天',
     'close': '關閉',
-    'home_first_tip_body': '請按右下方想講～按鍵填好個人資料，按開始聊天。之後於首頁篩選條件進行聊天。',
+    'home_first_tip_body': '請按右下方想講～按鍵填好個人資料，按開始聊天。',
+    'nearby_top_tip_body':
+        '若之前在首頁無按想講～填資料，請現按右下角想講～填返，之後篩選條件進行聊天。',
     'cookie_banner_title': 'Cookie 與隱私',
     'cookie_banner_body':
         '我們使用必要 Cookie（含由伺服器設定的安全登入工作階段）以維持帳戶安全，並可儲存語言與顯示偏好。若你同意「分析」類別，我們會以匿名方式記錄頁面瀏覽摘要（不含聊天內容與密碼），以優化配對與服務。詳見設定內說明。',
@@ -780,7 +782,9 @@ class LanguageProvider with ChangeNotifier {
     'match_success': '配对成功！',
     'chat_now': '立即聊天',
     'close': '关闭',
-    'home_first_tip_body': '请按右下方想讲～按键填好个人资料，按开始聊天。之后于首页筛选条件进行聊天。',
+    'home_first_tip_body': '请按右下方想讲～按键填好个人资料，按开始聊天。',
+    'nearby_top_tip_body':
+        '若之前在首页无按想讲～填资料，请现按右下角想讲～补填，之后筛选条件进行聊天。',
     'cookie_banner_title': 'Cookie 与隐私',
     'cookie_banner_body':
         '我们使用必要 Cookie（含由服务器设置的安全登录会话）以维持账户安全，并可保存语言与显示偏好。若你同意「分析」类别，我们会以匿名方式记录页面浏览摘要（不含聊天内容与密码），以优化配对与服务。',
@@ -1384,7 +1388,9 @@ class LanguageProvider with ChangeNotifier {
     'chat_now': 'Chat Now',
     'close': 'Close',
     'home_first_tip_body':
-        'Tap the bottom-right One sentence button, fill in your profile, then tap Start chatting. After that, use the Home filters to find people to chat with.',
+        'Use the One sentence button at the bottom right to complete your profile, then tap Start chatting.',
+    'nearby_top_tip_body':
+        'If you have not used One sentence on Home to fill in your details, tap One sentence at the bottom right to complete them, then set filters to find people to chat with.',
     'cookie_banner_title': 'Cookies & privacy',
     'cookie_banner_body':
         'We use essential cookies (including a secure login session set by the server) for account safety, and may store language and display preferences. If you accept analytics, we record anonymized page-view summaries (no chat text or passwords) to improve matching.',

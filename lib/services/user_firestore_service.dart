@@ -800,4 +800,55 @@ class UserFirestoreService {
       },
     );
   }
+
+  /// 寫入 FCM 裝置 token，供 [functions/index.js] 在未開啟 App／瀏覽器時推播新訊息用。
+  Future<void> syncFcmTokenForCurrentPlatform(String? token) async {
+    if (!FirebaseBootstrap.isReady) return;
+    final u = FirebaseAuth.instance.currentUser;
+    if (u == null || token == null || token.isEmpty) return;
+    final String field;
+    if (kIsWeb) {
+      field = 'fcmTokenWeb';
+    } else {
+      switch (defaultTargetPlatform) {
+        case TargetPlatform.iOS:
+          field = 'fcmTokenIos';
+          break;
+        case TargetPlatform.android:
+          field = 'fcmTokenAndroid';
+          break;
+        default:
+          field = 'fcmTokenOther';
+      }
+    }
+    try {
+      await _db.collection(FirestorePaths.users).doc(u.uid).set(
+        {
+          field: token,
+          'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
+    } catch (e, st) {
+      debugPrint('syncFcmTokenForCurrentPlatform: $e\n$st');
+    }
+  }
+
+  /// 與 [NotificationProvider.messageSoundEnabled] 同步；後端讀 [notifNewMessagePush] 是否發送 FCM。缺省當作 `true`。
+  Future<void> syncNotifNewMessagePushToServer(bool enabled) async {
+    if (!FirebaseBootstrap.isReady) return;
+    final u = FirebaseAuth.instance.currentUser;
+    if (u == null) return;
+    try {
+      await _db.collection(FirestorePaths.users).doc(u.uid).set(
+        {
+          'notifNewMessagePush': enabled,
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
+    } catch (e, st) {
+      debugPrint('syncNotifNewMessagePushToServer: $e\n$st');
+    }
+  }
 }

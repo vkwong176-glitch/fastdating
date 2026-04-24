@@ -16,3 +16,5 @@ firebase.initializeApp({
 });
 
 const messaging = firebase.messaging();
+// 含 [notification] 的 FCM 由 SDK 在背景顯示一則系統通知（鈴聲由作業系統／瀏覽器決定）。
+// 勿在此額外 showNotification，否則易與 SDK 重複兩則。僅在改為只送 data 訊息時再自寫 onBackgroundMessage。

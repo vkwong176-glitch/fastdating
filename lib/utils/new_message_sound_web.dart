@@ -1,10 +1,31 @@
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
+
 import 'package:web/web.dart' as web;
 
-/// Web：瀏覽器**無法**播放與手機內建「訊息」或系統**同一條**通知鈴聲，僅能以 Web Audio 作短提示。
-/// 與內建鈴聲完全一致請使用 **Android／iOS App**；若需與 FCM 相同聲音，可依賴系統推播（非本頁內偵測路徑）。
+/// Web：瀏覽器**無法**保證與手機內建「訊息」同一條鈴聲；本頁以 Web Audio 作短提示。
+/// iOS Safari 常將 [AudioContext] 置於 `suspended` 或阻擋自動播放——請配合 [index.html] 內
+/// 首次觸控寫入 `window.__fdMsgAudioCtx`；播放前仍會 [AudioContext.resume]。
+web.AudioContext? _localContext;
+
+web.AudioContext? _contextFromUnlockedWindow() {
+  final o = (web.window as JSObject)['__fdMsgAudioCtx'];
+  if (o == null) return null;
+  return o as web.AudioContext;
+}
+
+web.AudioContext _getOrCreateContext() {
+  return _contextFromUnlockedWindow() ?? (_localContext ??= web.AudioContext());
+}
+
 Future<void> playNewMessageNotificationSound() async {
   try {
-    final ctx = web.AudioContext();
+    final ctx = _getOrCreateContext();
+
+    if (ctx.state == 'suspended') {
+      await ctx.resume().toDart;
+    }
+
     final osc = ctx.createOscillator();
     final gain = ctx.createGain();
     osc.frequency.value = 880;

@@ -4,6 +4,7 @@
 
 const functions = require("firebase-functions/v1");
 const { onRequest: onRequestV2 } = require("firebase-functions/v2/https");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 const express = require("express");
@@ -14,6 +15,7 @@ const db = admin.firestore();
 
 const ORDERS = "subscription_orders";
 const USERS = "users";
+const CONVERSATIONS = "conversations";
 const PUBLIC_FEED_POSTS = "public_feed_posts";
 const MANUAL_PAYMENT_METHOD = "manual_fps_wechat_bank";
 const PURCHASE_KIND_SUBSCRIPTION = "subscription";
@@ -518,5 +520,134 @@ exports.manualSubscriptionDailySweep = onSchedule(
       changedAdCoop,
       at: now.toISOString(),
     });
+  },
+);
+
+// —— 新訊息：背景 FCM（未開啟網站／App 仍可收系統通知；聲音由裝置／系統決定）——
+
+/**
+ * @param {Record<string, unknown>} u
+ * @returns {string[]}
+ */
+function collectUserFcmTokens(u) {
+  const raw = [
+    u.fcmTokenWeb,
+    u.fcmTokenAndroid,
+    u.fcmTokenIos,
+    u.fcmTokenOther,
+  ];
+  const out = [];
+  for (const t of raw) {
+    if (typeof t === "string" && t.trim().length > 20) {
+      out.push(t.trim());
+    }
+  }
+  return [...new Set(out)];
+}
+
+exports.onChatMessageCreated = onDocumentCreated(
+  {
+    document: `${CONVERSATIONS}/{cid}/messages/{mid}`,
+    region: "us-central1",
+  },
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+    const msg = snap.data() || {};
+    const senderId = String(msg.senderId || "").trim();
+    if (!senderId) return;
+
+    const cid = String(event.params.cid || "").trim();
+    const mid = String(event.params.mid || "").trim();
+    if (!cid) return;
+
+    const conv = await db.collection(CONVERSATIONS).doc(cid).get();
+    const cdata = conv.data() || {};
+    const part = cdata.participantIds;
+    if (!Array.isArray(part)) return;
+    const recipient = part.find((id) => id && String(id) !== senderId);
+    if (!recipient) return;
+
+    const uref = db.collection(USERS).doc(String(recipient));
+    const usnap = await uref.get();
+    const u = usnap.data() || {};
+    if (u.notifNewMessagePush === false) return;
+
+    const tokens = collectUserFcmTokens(u);
+    if (tokens.length === 0) return;
+
+    const type = String(msg.type || "text");
+    const textRaw = (msg.text && String(msg.text).trim()) || "";
+    let preview = textRaw;
+    if (!preview) {
+      if (type === "image") preview = "📷 圖片";
+      else if (type === "voice") preview = "🎤 語音訊息";
+      else if (type === "file") preview = "📎 檔案";
+      else preview = "新訊息";
+    }
+    if (preview.length > 120) {
+      preview = preview.slice(0, 117) + "...";
+    }
+
+    let senderLabel = "會員";
+    try {
+      const sdoc = await db.collection(USERS).doc(senderId).get();
+      const sd = sdoc.data() || {};
+      const dn = sd.displayName && String(sd.displayName).trim();
+      if (dn) senderLabel = dn;
+    } catch (_) {
+      // ignore
+    }
+
+    const notification = {
+      title: senderLabel,
+      body: preview,
+    };
+
+    const data = {
+      type: "chat",
+      cid: cid,
+      senderId: senderId,
+      mid: mid,
+    };
+
+    try {
+      await admin.messaging().sendMulticast({
+        tokens,
+        notification,
+        data: {
+          type: data.type,
+          cid: data.cid,
+          senderId: data.senderId,
+          mid: data.mid,
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: "default",
+            },
+          },
+        },
+        android: {
+          priority: "high",
+          notification: {
+            defaultSound: true,
+            defaultVibrateTimings: true,
+          },
+        },
+        webpush: {
+          notification: {
+            title: notification.title,
+            body: notification.body,
+            icon: "https://fastdating1.com/icons/fd-icon-192.png",
+          },
+          fcmOptions: {
+            link: "https://fastdating1.com/messages",
+          },
+        },
+      });
+    } catch (e) {
+      console.error("onChatMessageCreated FCM", e);
+    }
   },
 );
