@@ -20,6 +20,10 @@ abstract final class StoreProductIds {
   static String forAdPartnerPost(String months) =>
       'com.fastdating.adpost.${months}m';
 
+  /// 單筆活動報名內購。請在 **Google Play Console** 建立**消費型**（可重複購買）、在 **App Store Connect** 建立
+  /// **Consumable** 或等同之「非訂閱型」內購，且**商品 ID 與此常數一致**、定價與活動收費一致或另行約定。
+  static const String activityRegistration = 'com.fastdating.activity.registration';
+
   /// 除錯或批次查價用（共 7 頁 × 4 種月數）
   static Set<String> allProductIds() {
     final out = <String>{};
@@ -28,6 +32,7 @@ abstract final class StoreProductIds {
         out.add(forPlanPage(pageIndex: page, months: m));
       }
     }
+    out.add(activityRegistration);
     return out;
   }
 }

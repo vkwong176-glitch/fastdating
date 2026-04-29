@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../models/user_post_item.dart';
@@ -19,6 +20,23 @@ class FeedProvider with ChangeNotifier {
 
   FeedProvider() {
     _bindRemote();
+    if (!FirebaseBootstrap.isReady) {
+      // 建構子若早於 [FirebaseBootstrap.init] 完成，稍後補訂閱（Android 冷啟常見）。
+      Future<void>.delayed(const Duration(milliseconds: 500), _rebindIfReady);
+    }
+    // 再保險：部分裝置網路／Firestore 首包較晚，與 [StreamBuilder] 同頁時避免錯失首次合併。
+    Future<void>.delayed(const Duration(seconds: 2), _rebindIfReady);
+  }
+
+  void _rebindIfReady() {
+    if (FirebaseBootstrap.isReady) {
+      _bindRemote();
+    }
+  }
+
+  /// 供邀聊通知等手動觸發（下拉更新）：重新訂閱公開牆＋宣傳貼文串流。
+  void rebindRemoteStreams() {
+    _rebindIfReady();
   }
 
   static int _comparePostsByCreatedAtDesc(UserPostItem a, UserPostItem b) {
@@ -60,7 +78,11 @@ class FeedProvider with ChangeNotifier {
         lastGeneral = posts;
         onChunk();
       },
-      onError: (_) {},
+      onError: (Object e, StackTrace st) {
+        if (kDebugMode) {
+          debugPrint('FeedProvider watchPublicPosts: $e\n$st');
+        }
+      },
     );
     _subAdPromotions =
         FeedFirestoreService.instance.watchActiveAdPromotionPosts().listen(
@@ -68,7 +90,11 @@ class FeedProvider with ChangeNotifier {
         lastAdOnly = posts;
         onChunk();
       },
-      onError: (_) {},
+      onError: (Object e, StackTrace st) {
+        if (kDebugMode) {
+          debugPrint('FeedProvider watchActiveAdPromotionPosts: $e\n$st');
+        }
+      },
     );
     unawaited(FeedFirestoreService.instance.deleteExpiredPublicFeedPosts());
     unawaited(FeedFirestoreService.instance.pauseExpiredAdPromotions());

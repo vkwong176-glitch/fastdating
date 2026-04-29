@@ -599,10 +599,17 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _sendChatInviteToPeer(String peerId, String peerName) async {
-    if (peerId.startsWith('demo_match_')) {
+    final isMockPeer =
+        peerId.startsWith('demo_match_') || peerId.length < 20;
+    if (isMockPeer) {
       if (!mounted) return;
+      final lang = Provider.of<LanguageProvider>(context, listen: false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('示範用戶僅供預覽，請在真實會員上使用邀請聊天')),
+        SnackBar(
+          content: Text(lang.nearbyDemoChatLine),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+        ),
       );
       return;
     }

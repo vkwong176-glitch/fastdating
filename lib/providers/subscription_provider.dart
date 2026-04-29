@@ -45,6 +45,9 @@ class SubscriptionRecord {
   final DateTime? orderUpdatedAt;
   final DateTime? explicitExpirationDate;
 
+  /// [subscription_orders.productId]；IAP 例：`com.fastdating.ad.3m`、`com.fastdating.fd1.12m`
+  final String? productId;
+
   DateTime get expirationDate {
     if (explicitExpirationDate != null) {
       return explicitExpirationDate!;
@@ -84,6 +87,7 @@ class SubscriptionRecord {
     this.adContentHistory = const [],
     this.orderUpdatedAt,
     this.explicitExpirationDate,
+    this.productId,
   });
 }
 
@@ -210,6 +214,9 @@ class SubscriptionProvider with ChangeNotifier {
       adContentHistory: _parseAdContentHistory(m['adContentHistory']),
       orderUpdatedAt: orderUpd,
       explicitExpirationDate: explicitExpiry,
+      productId: m['productId']?.toString().trim().isNotEmpty == true
+          ? m['productId']!.toString().trim()
+          : null,
     );
   }
 
@@ -274,18 +281,45 @@ class SubscriptionProvider with ChangeNotifier {
   /// 已於 Firestore 標記為訂閱生效（與聊天配額「無限」規則一致）。
   bool get isSubscriptionActiveUnlimited => _subscriptionActive;
 
-  /// 「訂閱方案·移除所有廣告」等已付款且在有效期內：不在訊息／邀聊通知／附近的人穿插宣傳貼文。
-  /// 與 [isSubscriptionActiveUnlimited]（[users.subscriptionActive]）對齊，並以 [SubscriptionRecord.expirationDate] 補上訂單判斷。
+  /// 僅「**移除所有廣告**」訂閱在有效期內：不在訊息／邀聊通知／附近的人穿插宣傳貼文。
+  /// 一般 Fast Dating 1～6 等訂閱 **仍會** 看到宣傳貼文（與以方案名稱辨識之預期一致；與舊邏輯不同）。
+  static bool isRemoveAllAdsSubscriptionRecord(SubscriptionRecord r) {
+    if (r.purchaseKind != SubscriptionOrderService.purchaseKindSubscription) {
+      return false;
+    }
+    final pid = (r.productId ?? '').trim();
+    if (pid.isNotEmpty) {
+      if (pid.contains('com.fastdating.adpost.')) {
+        return false; // 廣告合作方案內購，與首頁「移除廣告」層級不同
+      }
+      if (pid.contains('com.fastdating.ad.')) {
+        return true;
+      }
+    }
+    final n = r.planName.trim();
+    if (n.isEmpty) return false;
+    if (n.contains('移除') && (n.contains('廣告') || n.contains('广告'))) {
+      return true;
+    }
+    final nl = n.toLowerCase();
+    if (nl.contains('remove all ads') ||
+        nl.contains('remove ads') ||
+        nl.contains('no ads')) {
+      return true;
+    }
+    return false;
+  }
+
   bool get shouldHideInFeedAdPromotions {
     if (!FirebaseBootstrap.isReady) return false;
-    if (isSubscriptionActiveUnlimited) return true;
     final now = DateTime.now();
     for (final r in _orderRecords) {
       if (r.purchaseKind != SubscriptionOrderService.purchaseKindSubscription) {
         continue;
       }
       if (!r.isPaid) continue;
-      if (now.isBefore(r.expirationDate)) return true;
+      if (!now.isBefore(r.expirationDate)) continue;
+      if (isRemoveAllAdsSubscriptionRecord(r)) return true;
     }
     return false;
   }

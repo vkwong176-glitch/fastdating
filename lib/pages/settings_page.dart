@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -30,6 +32,17 @@ class _SettingsPageState extends State<SettingsPage> {
       AppConstants.filterFontExtraHalfCm;
   bool _inappropriateFilterOn = true;
   bool _deletingAccount = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(
+        context.read<AuthProvider>().refreshCurrentAccountForDisplay(),
+      );
+    });
+  }
 
   bool _isMobileLayout(BuildContext context) =>
       MediaQuery.sizeOf(context).width < AppConstants.layoutWideBreakpoint;
@@ -191,13 +204,28 @@ class _SettingsPageState extends State<SettingsPage> {
           _section(
             langProvider.getString('account'),
             [
-              _rowWithValue(
-                icon: Icons.person,
-                title: langProvider.getString('current_account'),
-                value: authProvider.currentAccount ?? '—',
-                fontSizeExtra: contentFontExtra,
-                mobileFontExtra: mobileFs,
-                valueColor: isMobile ? Colors.black : AppConstants.grey,
+              StreamBuilder<User?>(
+                stream: FirebaseAuth.instance.authStateChanges(),
+                builder: (context, snapshot) {
+                  final user =
+                      snapshot.data ?? FirebaseAuth.instance.currentUser;
+                  final String accountValue;
+                  if (user == null) {
+                    accountValue = '未登入';
+                  } else {
+                    final email = user.email;
+                    accountValue =
+                        (email != null && email.isNotEmpty) ? email : '—';
+                  }
+                  return _rowWithValue(
+                    icon: Icons.person,
+                    title: langProvider.getString('current_account'),
+                    value: accountValue,
+                    fontSizeExtra: contentFontExtra,
+                    mobileFontExtra: mobileFs,
+                    valueColor: isMobile ? Colors.black : AppConstants.grey,
+                  );
+                },
               ),
               _rowWithArrow(
                 icon: Icons.history,

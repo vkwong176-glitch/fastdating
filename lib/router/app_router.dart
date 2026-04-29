@@ -8,6 +8,7 @@ import '../pages/activity_record_page.dart';
 import '../pages/activity_page.dart';
 import '../pages/event_proposal_page.dart';
 import '../pages/faq_page.dart';
+import '../pages/launch_welcome_page.dart';
 import '../pages/login_page.dart';
 import '../pages/main_shell.dart';
 import '../pages/marketing_about_page.dart';
@@ -18,7 +19,6 @@ import '../pages/privacy_settings_page.dart';
 import '../pages/purchase_history_page.dart';
 import '../pages/settings_page.dart';
 import '../pages/sign_up_page.dart';
-import '../pages/splash_page.dart';
 import '../pages/subscribed_plan_page.dart';
 import '../pages/subscription_page.dart';
 import '../pages/one_sentence_page.dart';
@@ -118,7 +118,7 @@ String? _globalRedirect(BuildContext context, GoRouterState state) {
   if (path == '/one-sentence') {
     return '/talking';
   }
-  /// Web：不經啟動頁，根路徑直接進登入（與 [initialLocation] 一致）。
+  /// Web：直接進登入；iOS／Android 啟動頁見 [LaunchWelcomePage]（1.5 秒後進 `/login`）。
   if (kIsWeb && path == '/') {
     return '/login';
   }
@@ -137,7 +137,7 @@ final GoRouter appRouter = GoRouter(
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) => const SplashPage(),
+      builder: (context, state) => const LaunchWelcomePage(),
     ),
     GoRoute(
       path: '/login',
@@ -295,30 +295,27 @@ final GoRouter appRouter = GoRouter(
         child: const AdPartnerPage(seoPublicPath: '/advertising'),
       ),
     ),
+    /// 勿使用僅含子路由的 `/subscription` 父層（go_router 需 builder／pageBuilder／redirect）；
+    /// 改為單一路徑 `/subscription/:tier`，而 `/subscription` 由 [_globalRedirect] 導向預設 tier。
     GoRoute(
-      path: '/subscription',
-      routes: [
-        GoRoute(
-          path: ':tier',
-          builder: (context, state) {
-            final tier = state.pathParameters['tier'] ?? '';
-            final idx = parseSubscriptionTierPath(tier);
-            if (idx == null) {
-              return const Scaffold(
-                body: Center(child: Text('找不到此訂閱方案')),
-              );
-            }
-            final p = '/subscription/$tier';
-            return SeoRouteListener(
-              path: p,
-              child: SubscriptionPage(
-                initialPageIndex: idx,
-                seoPath: p,
-              ),
-            );
-          },
-        ),
-      ],
+      path: '/subscription/:tier',
+      builder: (context, state) {
+        final tier = state.pathParameters['tier'] ?? '';
+        final idx = parseSubscriptionTierPath(tier);
+        if (idx == null) {
+          return const Scaffold(
+            body: Center(child: Text('找不到此訂閱方案')),
+          );
+        }
+        final p = '/subscription/$tier';
+        return SeoRouteListener(
+          path: p,
+          child: SubscriptionPage(
+            initialPageIndex: idx,
+            seoPath: p,
+          ),
+        );
+      },
     ),
     GoRoute(
       path: '/event/:eventSlug',

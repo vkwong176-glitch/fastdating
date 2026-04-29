@@ -1,7 +1,7 @@
 name: fastdating
-description: "A new Flutter project."
+description: "Fast Dating 香港單身配對（speed dating）—HK LOVE EASY 升級版。"
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.7+40
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -50,13 +50,33 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/app_brand_launch.png
+  min_sdk_android: 21
+  remove_alpha_ios: true
+  adaptive_icon_background: "#FF7F50"
+  adaptive_icon_foreground: assets/images/app_brand_launch.png
+
+# 與啟動頁 [LaunchWelcomePage] 主色銜接，避免冷開機先閃灰白再進漸層。
+flutter_native_splash:
+  color: "#FF7F50"
+  android: true
+  ios: true
+  web: false
+  android_12:
+    color: "#FF7F50"
 
 flutter:
   uses-material-design: true
   assets:
     - assets/legal/privacy_zh_hk.txt
     - assets/legal/user_terms_zh_hk.txt
-    - assets/images/branding_love_banner.webp
+    - assets/images/app_brand_launch.png
     - assets/images/subscription_pointing_hand.webp
     - assets/images/wechat_pay_qr.png
     - assets/images/wechat_pay_qr_cny.png

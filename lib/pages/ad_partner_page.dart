@@ -780,8 +780,78 @@ class _AdPartnerPageState extends State<AdPartnerPage> {
     }
   }
 
-  void _openAdPaymentMethodChooser(LanguageProvider lang) {
+  Future<void> _openAdPaymentMethodChooser(LanguageProvider lang) async {
     if (!_requireLoggedInForPayment()) return;
+
+    /// iOS／Android：與網頁版相同，可選 FPS／WeChat／銀行戶口手動轉帳，或 App Store／Google Play 內購（後台可各自開關）。
+    if (!kIsWeb) {
+      final ps = await PaymentSettingsService.getDefault();
+      if (!mounted) return;
+      if (!ps.enableIap && !ps.enableManual) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('管理員已暫停所有付款方式，請稍後再試。'),
+          ),
+        );
+        return;
+      }
+      if (ps.enableIap && !ps.enableManual) {
+        await _handleAdIapPurchase(lang);
+        return;
+      }
+      if (ps.enableManual && !ps.enableIap) {
+        await _showAdManualTransfer(lang);
+        return;
+      }
+      if (!mounted) return;
+      await showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        builder: (ctx) => SafeArea(
+          child: StreamBuilder<PaymentSettingsSnapshot>(
+            stream: PaymentSettingsService.watchDefault(),
+            builder: (context, snap) {
+              final s = snap.data ?? PaymentSettingsSnapshot.defaults;
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (s.enableManual) ...[
+                      ManualFpsPaymentButtonBlock(
+                        lang: lang,
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _showAdManualTransfer(lang);
+                        },
+                      ),
+                      if (s.enableIap) const SizedBox(height: 12),
+                    ],
+                    if (s.enableIap)
+                      ListTile(
+                        leading: const Icon(Icons.smartphone, color: AppConstants.primaryColor),
+                        title: Text(lang.getString('pay_choice_iap')),
+                        subtitle: Text(
+                          lang.getString('subscription_iap_subtitle'),
+                        ),
+                        onTap: _adIapBusy
+                            ? null
+                            : () {
+                                Navigator.pop(ctx);
+                                _handleAdIapPurchase(lang);
+                              },
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -790,22 +860,15 @@ class _AdPartnerPageState extends State<AdPartnerPage> {
           stream: PaymentSettingsService.watchDefault(),
           builder: (context, snap) {
             final ps = snap.data ?? PaymentSettingsSnapshot.defaults;
-            final tiles = <Widget>[];
-            if (ps.enableIap && !kIsWeb) {
-              tiles.add(
-                ListTile(
-                  leading: const Icon(Icons.smartphone),
-                  title: const Text('App Store／Google Play'),
-                  subtitle: const Text('依裝置使用 App Store 或 Google Play 付款'),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _handleAdIapPurchase(lang);
-                  },
-                ),
+            if (!ps.enableManual) {
+              return const Padding(
+                padding: EdgeInsets.all(24),
+                child: Text('管理員已暫停所有付款方式，請稍後再試。'),
               );
             }
-            if (ps.enableManual) {
-              tiles.add(
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -817,18 +880,6 @@ class _AdPartnerPageState extends State<AdPartnerPage> {
                     },
                   ),
                 ),
-              );
-            }
-            if (tiles.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('管理員已暫停所有付款方式，請稍後再試。'),
-              );
-            }
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ...tiles,
                 const SizedBox(height: 8),
               ],
             );

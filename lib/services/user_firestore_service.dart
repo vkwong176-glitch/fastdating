@@ -154,7 +154,24 @@ class UserFirestoreService {
     if (!FirebaseBootstrap.isReady) return;
     final ref = _db.collection(FirestorePaths.users).doc(user.uid);
     final existing = await ref.get();
-    final email = (user.email ?? emailOverride)?.trim() ?? '';
+    var email = (user.email ?? emailOverride)?.trim() ?? '';
+    // Android Google 常有 [User.email] 仍空，但 google.com Provider 資料帶有 email。
+    if (email.isEmpty) {
+      for (final p in user.providerData) {
+        final pe = p.email?.trim();
+        if (pe != null && pe.isNotEmpty) {
+          email = pe;
+          break;
+        }
+      }
+    }
+    // Google／OAuth 當下 Firebase [User.email] 可能仍空，避免 merge 寫入空字串沖掉既有 email。
+    if (email.isEmpty && existing.exists) {
+      final prev = existing.data()?['email'];
+      if (prev is String && prev.trim().isNotEmpty) {
+        email = prev.trim();
+      }
+    }
     var displayName = (loginName != null && loginName.trim().isNotEmpty)
         ? loginName.trim()
         : (user.displayName ?? '');
@@ -255,6 +272,20 @@ class UserFirestoreService {
       final n = (doc.data()?['displayName'] as String?)?.trim();
       if (n == null || n.isEmpty) return null;
       return n;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 讀取會員文件中的 [email]（僅有值才回傳），供設定頁「當前登入帳號」在 Auth 帶不出 email 時補顯示。
+  Future<String?> fetchUserEmailForUid(String uid) async {
+    if (!FirebaseBootstrap.isReady) return null;
+    try {
+      final doc = await _db.collection(FirestorePaths.users).doc(uid).get();
+      if (!doc.exists) return null;
+      final e = (doc.data()?['email'] as String?)?.trim();
+      if (e == null || e.isEmpty) return null;
+      return e;
     } catch (_) {
       return null;
     }

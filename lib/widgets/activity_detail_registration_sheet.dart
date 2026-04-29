@@ -1,13 +1,16 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/language_provider.dart';
 import '../services/firebase_bootstrap.dart';
-import '../services/store_iap_service.dart';
+import '../services/store_iap_service.dart'
+    show StoreIapService, StorePurchaseCanceled;
+import '../services/store_product_ids.dart';
 import '../services/subscription_order_service.dart';
 import '../services/payment_settings_service.dart';
 import '../utils/activity_registration_price.dart';
@@ -180,6 +183,7 @@ class _ActivityRegistrationBody extends StatefulWidget {
 class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
   int _participants = 1;
   int _selectedDateIndex = 0;
+  bool _iapPurchaseInProgress = false;
 
   int get _cap => widget.maxParticipants.clamp(1, 10);
 
@@ -360,11 +364,22 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
     );
   }
 
+  String get _activityIapPaymentMethod {
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.iOS:
+        return 'iap_app_store';
+      case TargetPlatform.android:
+        return 'iap_google_play';
+      default:
+        return 'iap_other';
+    }
+  }
+
+  /// iOS／Android：實際開啟 App Store / Google Play 內購；商店不可用時改示範訂單（與訂閱頁一致）。
   Future<void> _handleIapPath() async {
     if (!_requireMemberLogin()) return;
-    final supported = StoreIapService.instance.supportedOnThisPlatform &&
-        await StoreIapService.instance.isAvailable();
-    if (!supported) {
+    if (!StoreIapService.instance.supportedOnThisPlatform ||
+        !await StoreIapService.instance.isAvailable()) {
       await SubscriptionOrderService.recordOrder(
         planName: _titleWithOptionalDateForWhatsApp,
         months: '$_participants',
@@ -375,7 +390,6 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
         activityId: widget.activityId,
         activitySummary: _summaryForOrder,
       );
-      // 收據僅依 [subscription_orders] 一筆；勿再寫本機以免購買記錄重複。
       if (mounted) {
         Navigator.pop(context);
       }
@@ -388,13 +402,82 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
       }
       return;
     }
-    if (mounted) {
+
+    if (_iapPurchaseInProgress) return;
+    setState(() => _iapPurchaseInProgress = true);
+    final lang = widget.lang;
+    final productId = StoreProductIds.activityRegistration;
+    try {
+      final res = await StoreIapService.instance.queryProducts({productId});
+      if (res.error != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('無法查詢商店商品：${res.error}')),
+          );
+        }
+        return;
+      }
+      if (res.productDetails.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '未找到商店內購商品：$productId\n'
+                '請在 Google Play Console 建立「應用程式內產品」（消費型），\n'
+                '或 App Store Connect 建立 Consumable，且商品 ID 須與上列完全一致。',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+      final product = res.productDetails.first;
+      final details = await StoreIapService.instance.buyConsumable(product);
+      if (!mounted) return;
+      await StoreIapService.instance.completePurchase(details);
+      if (!mounted) return;
+      if (FirebaseBootstrap.isReady) {
+        await SubscriptionOrderService.recordOrder(
+          planName: _titleWithOptionalDateForWhatsApp,
+          months: '$_participants',
+          totalPrice: '${product.price}',
+          paymentMethod: _activityIapPaymentMethod,
+          purchaseKind:
+              SubscriptionOrderService.purchaseKindActivityRegistration,
+          status: 'paid_iap',
+          productId: productId,
+          activityId: widget.activityId,
+          activitySummary: _summaryForOrder,
+        );
+      }
+      if (!mounted) return;
       Navigator.pop(context);
-    }
-    if (widget.hostContext.mounted) {
-      ScaffoldMessenger.of(widget.hostContext).showSnackBar(
-        SnackBar(content: Text(widget.lang.getString('activity_iap_use_app'))),
-      );
+      if (widget.hostContext.mounted) {
+        ScaffoldMessenger.of(widget.hostContext).showSnackBar(
+          SnackBar(
+            content: Text(
+              lang.getString('payment_success_check_receipt'),
+            ),
+          ),
+        );
+      }
+    } on StorePurchaseCanceled {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已取消')),
+        );
+      }
+    } catch (e, st) {
+      debugPrint('activity IAP: $e\n$st');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('付款失敗：$e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _iapPurchaseInProgress = false);
+      }
     }
   }
 
@@ -403,82 +486,138 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
     final lang = widget.lang;
     final bottom = MediaQuery.paddingOf(context).bottom;
     final topGap = 0.5 * AppConstants.logicalPxPerCm;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottom),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(height: topGap),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    widget.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+    // 包一層 [Scaffold]，讓 [SnackBar] 掛在 bottom sheet／dialog 內可見。
+    // 否則訊息會落在底層 [ScaffoldMessenger]，被半屏遮罩擋住，只有關閉頁面後才看到。
+    return Scaffold(
+      backgroundColor: AppConstants.backgroundColor,
+      body: Padding(
+        padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottom),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(height: topGap),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    lang.getString('activity_scroll_pay_banner'),
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.red,
-                      height: 1.25,
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      lang.getString('activity_scroll_pay_banner'),
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.red,
+                        height: 1.25,
+                      ),
                     ),
+                  ),
+                ],
+              ),
+              if (_imageForRight != null) ...[
+                const SizedBox(height: 12),
+                _fullWidthEventImage(_imageForRight!),
+              ],
+              if (_displayDetailParagraph.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  lang.getString('activity_details_label'),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF333333),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _displayDetailParagraph,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey[800],
+                    height: 1.45,
                   ),
                 ),
               ],
-            ),
-            if (_imageForRight != null) ...[
-              const SizedBox(height: 12),
-              _fullWidthEventImage(_imageForRight!),
-            ],
-            if (_displayDetailParagraph.isNotEmpty) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Text(
-                lang.getString('activity_details_label'),
+                '${lang.getString('payment_amount')}: $_totalPrice',
                 style: const TextStyle(
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF333333),
+                  color: AppConstants.primaryColor,
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                _displayDetailParagraph,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.grey[800],
-                  height: 1.45,
+              if (_dateOptions.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        lang.getString('activity_reg_pick_event_date'),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: Color(0xFF333333),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        lang.getString('activity_reg_swipe_right_select_gt'),
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red,
+                          height: 1.25,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-            const SizedBox(height: 8),
-            Text(
-              '${lang.getString('payment_amount')}: $_totalPrice',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppConstants.primaryColor,
-              ),
-            ),
-            if (_dateOptions.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 44,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: _dateOptions.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, i) {
+                      final sel = _selectedDateIndex == i;
+                      return ChoiceChip(
+                        label: Text(
+                          _dateOptions[i],
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        selected: sel,
+                        onSelected: (_) =>
+                            setState(() => _selectedDateIndex = i),
+                      );
+                    },
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: Text(
-                      lang.getString('activity_reg_pick_event_date'),
+                      lang.getString('activity_reg_headcount'),
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
@@ -486,10 +625,10 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Flexible(
                     child: Text(
-                      lang.getString('activity_reg_swipe_right_select_gt'),
+                      lang.getString('activity_reg_swipe_right_select'),
                       textAlign: TextAlign.right,
                       style: const TextStyle(
                         fontSize: 13,
@@ -497,6 +636,15 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
                         color: Colors.red,
                         height: 1.25,
                       ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '$_participants',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                      color: AppConstants.primaryColor,
                     ),
                   ),
                 ],
@@ -507,123 +655,73 @@ class _ActivityRegistrationBodyState extends State<_ActivityRegistrationBody> {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
-                  itemCount: _dateOptions.length,
+                  itemCount: _cap,
                   separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (context, i) {
-                    final sel = _selectedDateIndex == i;
+                    final n = i + 1;
+                    final sel = _participants == n;
                     return ChoiceChip(
-                      label: Text(
-                        _dateOptions[i],
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      label: Text('$n'),
                       selected: sel,
-                      onSelected: (_) =>
-                          setState(() => _selectedDateIndex = i),
+                      onSelected: (_) => setState(() => _participants = n),
                     );
                   },
                 ),
               ),
-            ],
-            const SizedBox(height: 12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    lang.getString('activity_reg_headcount'),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                      color: Color(0xFF333333),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    lang.getString('activity_reg_swipe_right_select'),
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.red,
-                      height: 1.25,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '$_participants',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 18,
-                    color: AppConstants.primaryColor,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 44,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: _cap,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, i) {
-                  final n = i + 1;
-                  final sel = _participants == n;
-                  return ChoiceChip(
-                    label: Text('$n'),
-                    selected: sel,
-                    onSelected: (_) => setState(() => _participants = n),
-                  );
+              const SizedBox(height: 8),
+              Text(
+                lang.getString('activity_choose_payment'),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              ),
+              const SizedBox(height: 8),
+              StreamBuilder<PaymentSettingsSnapshot>(
+                stream: PaymentSettingsService.watchDefault(),
+                builder: (context, snap) {
+                  final ps = snap.data ?? PaymentSettingsSnapshot.defaults;
+                  final tiles = <Widget>[];
+                  if (ps.enableIap && !kIsWeb) {
+                    tiles.add(
+                      ListTile(
+                        leading: const Icon(Icons.smartphone),
+                        title: Text(lang.getString('pay_choice_iap')),
+                        subtitle:
+                            Text(lang.getString('subscription_iap_subtitle')),
+                        trailing: _iapPurchaseInProgress
+                            ? const SizedBox(
+                                width: 28,
+                                height: 28,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : null,
+                        onTap: _iapPurchaseInProgress ? null : _handleIapPath,
+                      ),
+                    );
+                  }
+                  if (ps.enableManual) {
+                    tiles.add(
+                      ManualFpsPaymentButtonBlock(
+                        lang: lang,
+                        onPressed: _openManualTransfer,
+                      ),
+                    );
+                  }
+                  if (tiles.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Text(
+                        '管理員已暫停所有付款方式，請稍後再試。',
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  }
+                  return Column(
+                      mainAxisSize: MainAxisSize.min, children: tiles);
                 },
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              lang.getString('activity_choose_payment'),
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-            ),
-            const SizedBox(height: 8),
-            StreamBuilder<PaymentSettingsSnapshot>(
-              stream: PaymentSettingsService.watchDefault(),
-              builder: (context, snap) {
-                final ps = snap.data ?? PaymentSettingsSnapshot.defaults;
-                final tiles = <Widget>[];
-                if (ps.enableIap && !kIsWeb) {
-                  tiles.add(
-                    ListTile(
-                      leading: const Icon(Icons.smartphone),
-                      title: Text(lang.getString('pay_choice_iap')),
-                      subtitle:
-                          Text(lang.getString('subscription_iap_subtitle')),
-                      onTap: _handleIapPath,
-                    ),
-                  );
-                }
-                if (ps.enableManual) {
-                  tiles.add(
-                    ManualFpsPaymentButtonBlock(
-                      lang: lang,
-                      onPressed: _openManualTransfer,
-                    ),
-                  );
-                }
-                if (tiles.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text(
-                      '管理員已暫停所有付款方式，請稍後再試。',
-                      textAlign: TextAlign.center,
-                    ),
-                  );
-                }
-                return Column(mainAxisSize: MainAxisSize.min, children: tiles);
-              },
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

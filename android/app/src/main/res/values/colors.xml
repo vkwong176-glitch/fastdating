@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 與 Flutter AppConstants.primaryColor（#FF7F50）一致，避免啟動時白屏／淺灰閃爍 -->
-    <color name="splash_background">#FFFF7F50</color>
+    <!-- 與 flutter_native_splash、主畫面 Scaffold 底色一致（非粉紅）。 -->
+    <color name="splash_background">#FFF5F5F5</color>
+	<color name="ic_launcher_background">#FF7F50</color>
 </resources>

@@ -89,8 +89,13 @@ android {
                 signingConfigs.getByName("debug")
             }
             isDebuggable = false
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // R8／資源縮減 — 顯著縮小上架 APK；規則見 [proguard-rules.pro]
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }

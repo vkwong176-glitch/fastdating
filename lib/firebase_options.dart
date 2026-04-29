@@ -15,6 +15,12 @@ import 'package:flutter/foundation.dart'
 
 /// 由 FlutterFire CLI 產生；手動維護時請與 Firebase Console 專案一致。
 class DefaultFirebaseOptions {
+  /// Google Cloud「網路應用程式」OAuth 用戶端 ID（同 [android/app/google-services.json] 內 `oauth_client` client_type 3）。
+  /// Android [GoogleSignIn.initialize] 須傳入 [serverClientId]，否則取得之 ID token／帳戶資訊常缺 **email**，
+  /// 設定頁「當前登入帳號」會只顯示「—」（網頁版走 `signInWithPopup` 則正常）。
+  static const String googleOAuthWebClientId =
+      '780058794247-fbc4efsjnuum7rda9ulqltl9dbrbbdpv.apps.googleusercontent.com';
+
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
       return web;

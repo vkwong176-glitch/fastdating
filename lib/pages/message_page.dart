@@ -210,7 +210,14 @@ class _MessagePageState extends State<MessagePage> {
                         Expanded(
                           child: Text(
                             title,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: (DefaultTextStyle.of(context)
+                                          .style
+                                          .fontSize ??
+                                      16) -
+                                  0.08 * AppConstants.logicalPxPerCm,
+                            ),
                           ),
                         )
                       else
@@ -304,6 +311,59 @@ class _MessagePageState extends State<MessagePage> {
       return _chatSortMs(b).compareTo(_chatSortMs(a));
     });
     return sorted;
+  }
+
+  /// 未登入：頂部說明（私人訊息需登入；宣傳貼文與 web 一併顯示）＋下方列表或提示。
+  Widget _buildGuestMessageBody({
+    required BuildContext context,
+    required LanguageProvider lang,
+    required List<Map<String, dynamic>> chatList,
+    required double previewBoost,
+    required double mobileTimeFs,
+    required Color timeColor,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Material(
+          color: const Color(0xFFFFF3E0),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Text(
+              lang.getString('message_guest_dm_and_feed_hint'),
+              style: TextStyle(
+                fontSize: 13 + 0.05 * AppConstants.logicalPxPerCm,
+                height: 1.35,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: chatList.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      lang.getString('message_list_guest_hint'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                  ),
+                )
+              : _buildConversationListView(
+                  context: context,
+                  chatList: chatList,
+                  previewBoost: previewBoost,
+                  mobileTimeFs: mobileTimeFs,
+                  timeColor: timeColor,
+                ),
+        ),
+      ],
+    );
   }
 
   Widget _buildConversationListView({
@@ -523,27 +583,14 @@ class _MessagePageState extends State<MessagePage> {
       pageSalt: 'message_guest',
     );
 
-    final guestBody = chatList.isEmpty
-        ? Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                langProvider.getString('message_list_guest_hint'),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade800,
-                ),
-              ),
-            ),
-          )
-        : _buildConversationListView(
-            context: context,
-            chatList: chatList,
-            previewBoost: previewBoost,
-            mobileTimeFs: mobileTimeFs,
-            timeColor: timeColor,
-          );
+    final guestBody = _buildGuestMessageBody(
+      context: context,
+      lang: langProvider,
+      chatList: chatList,
+      previewBoost: previewBoost,
+      mobileTimeFs: mobileTimeFs,
+      timeColor: timeColor,
+    );
 
     return Scaffold(
       appBar: MainTabAppBar(

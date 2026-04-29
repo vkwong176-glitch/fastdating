@@ -58,6 +58,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "780058794247-rfousnahh6q0doheoiv48annhj9p46pq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.fastdating1.app",
+            "certificate_hash": "8efb39221a43f800385147b8cc2caf3193c372d7"
+          }
+        },
+        {
           "client_id": "780058794247-fbc4efsjnuum7rda9ulqltl9dbrbbdpv.apps.googleusercontent.com",
           "client_type": 3
         }

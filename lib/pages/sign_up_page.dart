@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
+import '../providers/auth_provider.dart';
+import '../providers/language_provider.dart';
 import '../utils/constants.dart';
 import '../utils/responsive_layout.dart';
 import '../widgets/pressable_opacity.dart';
-import '../providers/auth_provider.dart';
 
-/// 註冊頁（對齊右圖）：簡潔表單、無頂部圖、Login Name、Email、Phone、Password、Confirm Password
+/// 註冊頁：Email／密碼由 Firebase Auth 直接建立帳號。
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
 
@@ -33,14 +35,35 @@ class _SignUpPageState extends State<SignUpPage> {
     super.dispose();
   }
 
+  String _mapSignupError(LanguageProvider lang, String? raw) {
+    if (raw == null || raw.isEmpty) {
+      return lang.getString('signup_err_create_failed');
+    }
+    const table = {
+      'EMAIL_IN_USE': 'signup_err_email_in_use',
+      'WEAK_PASSWORD': 'signup_err_weak_password',
+      'NAME_TOO_SHORT': 'signup_err_name_too_short',
+      'CREATE_USER_FAILED': 'signup_err_create_failed',
+      'NO_FIREBASE': 'signup_err_no_firebase',
+    };
+    final u = raw.toUpperCase().replaceAll('-', '_');
+    final k = table[u];
+    if (k != null) {
+      return lang.getString(k);
+    }
+    return raw;
+  }
+
   Future<void> _signUp() async {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     if (_loginNameController.text.length < 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login Name 至少 4 個字元')),
+        SnackBar(content: Text(lang.getString('signup_err_name_too_short'))),
       );
       return;
     }
-    if (_emailController.text.isEmpty || _pwdController.text.isEmpty) {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || _pwdController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('請輸入 Email 與密碼')),
       );
@@ -55,16 +78,15 @@ class _SignUpPageState extends State<SignUpPage> {
     try {
       final err = await Provider.of<AuthProvider>(context, listen: false)
           .registerWithEmailPassword(
-        email: _emailController.text.trim(),
+        email: email,
         password: _pwdController.text,
         loginName: _loginNameController.text.trim(),
         phone: _phoneController.text.trim(),
       );
       if (!mounted) return;
       if (err != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err)),
-        );
+        final msg = _mapSignupError(lang, err);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
         return;
       }
       context.go('/main');
@@ -118,7 +140,11 @@ class _SignUpPageState extends State<SignUpPage> {
                     const SizedBox(height: 8),
                     _buildBilingualLabel('Email', '電子郵件'),
                     const SizedBox(height: 3),
-                    _buildEmailField(),
+                    TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: _inputDecoration('Email（電子郵件）'),
+                    ),
                     const SizedBox(height: 8),
                     _buildBilingualLabel(
                       'Phone : country code + number',
@@ -138,40 +164,40 @@ class _SignUpPageState extends State<SignUpPage> {
                     PressableOpacity(
                       onPressed: _signUp,
                       child: Container(
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: AppConstants.loginButtonPurple,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Center(
-                          child: Wrap(
-                            alignment: WrapAlignment.center,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            spacing: 8,
-                            runSpacing: 4,
-                            children: const [
-                              Text(
-                                'Sign Up',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                  letterSpacing: 1.2,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: AppConstants.loginButtonPurple,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Center(
+                            child: Wrap(
+                              alignment: WrapAlignment.center,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: const [
+                                Text(
+                                  'Sign Up',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                    letterSpacing: 1.2,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                '註冊',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                  letterSpacing: 0.5,
+                                Text(
+                                  '註冊',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
                     ),
                     const SizedBox(height: 12),
                     Center(
@@ -198,7 +224,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           ),
                           GestureDetector(
                             onTap: () => Navigator.pop(context),
-                            child: Text(
+                            child: const Text(
                               'Sign In here · 前往登入',
                               style: TextStyle(
                                 fontSize: 17,
@@ -250,12 +276,12 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Widget _buildBilingualTitle() {
-    return Wrap(
+    return const Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: 8,
       runSpacing: 6,
       children: [
-        const Text(
+        Text(
           'Sign Up',
           style: TextStyle(
             fontSize: 28,
@@ -292,14 +318,6 @@ class _SignUpPageState extends State<SignUpPage> {
       decoration: _inputDecoration(
         'Login name（登入名稱，至少 4 個字元）',
       ),
-    );
-  }
-
-  Widget _buildEmailField() {
-    return TextField(
-      controller: _emailController,
-      keyboardType: TextInputType.emailAddress,
-      decoration: _inputDecoration('Email（電子郵件）'),
     );
   }
 
@@ -365,3 +383,4 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 }
+

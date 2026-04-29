@@ -12,15 +12,15 @@ class SeoMetadata {
 
   static const String _site = 'Fast Dating';
   static const String _baseKeywords =
-      'Fast dating、Hk Love easy、speed dating、Single';
+      'Fast dating、speed dating、香港交友、單身配對、HK LOVE EASY、附近的人、活動、聊天、約會';
   static const String _homeSeoDescription =
-      'Fast dating 平台是HK LOVE EASY升級版，目的是讓單身人士在繁忙的日子裏，抽空認識新朋友，擴闊社交圈子，為生活帶來一點樂趣及減壓的作用.平台上功能豐富：有條件篩選配對，附近的人配對，活動推送，平台聊天功能，可以24hrs隨心聊天，認識新朋友.歡迎大家進入平台約會聊天';
+      'Fast dating 平台是 HK LOVE EASY 升級版，讓單身人士在繁忙日子裏抽空認識新朋友、擴闊社交圈子，為生活帶來樂趣與減壓。功能包括條件篩選配對、附近的人、活動推送、平台 24 小時隨心聊天。歡迎上 fastdating1.com 約會聊天。';
 
   /// 預設（首頁／登入等）
   static const SeoMetadata fallback = SeoMetadata(
-    title: '$_site｜Speed Dating 單身配對・多元交友平台',
+    title: '$_site 香港｜Speed Dating 單身配對・HK LOVE EASY 升級版',
     description: _homeSeoDescription,
-    h1: 'Fast Dating 多元約會與單身配對',
+    h1: 'Fast Dating 多元約會、speed dating 與單身配對',
   );
 
   static SeoMetadata forPath(String path) {

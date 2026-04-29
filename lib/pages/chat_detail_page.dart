@@ -732,6 +732,12 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         MediaQuery.sizeOf(context).width >= AppConstants.layoutWideBreakpoint
             ? AppConstants.chatDetailDesktopMessageExtraTenthCm
             : 0.0;
+    final viewPad = MediaQuery.viewPaddingOf(context);
+    /// Android：底部輸入列避開系統導航列，並依需求再上移 1.5cm，避免被遮擋。
+    final chatInputBottomInset = viewPad.bottom +
+        (foundation.defaultTargetPlatform == foundation.TargetPlatform.android
+            ? 1.5 * AppConstants.logicalPxPerCm
+            : 0.0);
 
     return Scaffold(
       appBar: AppBar(
@@ -832,8 +838,12 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   ),
           ),
           Container(
-            padding:
-                const EdgeInsets.only(left: 4, right: 8, top: 10, bottom: 10),
+            padding: EdgeInsets.only(
+              left: 4,
+              right: 8,
+              top: 10,
+              bottom: 10 + chatInputBottomInset,
+            ),
             decoration: BoxDecoration(
               color: AppConstants.white,
               boxShadow: [

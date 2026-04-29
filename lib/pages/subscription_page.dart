@@ -258,12 +258,27 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
     return true;
   }
 
-  /// 按「繼續」後選擇：應用程式商店／手動轉帳。
-  void _openPaymentMethodChooser(
+  /// 按「繼續」：iOS／Android 僅 App Store／Google Play；手動轉帳僅限 Web。
+  Future<void> _openPaymentMethodChooser(
     String planName,
     List<Map<String, String>> plans,
-  ) {
+  ) async {
     if (!_requireLoggedInForPayment()) return;
+    if (!kIsWeb) {
+      final ps = await PaymentSettingsService.getDefault();
+      if (!mounted) return;
+      if (ps.enableIap) {
+        await _handleContinuePurchase(planName, plans);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('管理員已暫停 App 內購，如有需要請在網頁版以手動轉帳辦理。'),
+          ),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -272,39 +287,9 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
           stream: PaymentSettingsService.watchDefault(),
           builder: (context, snap) {
             final ps = snap.data ?? PaymentSettingsSnapshot.defaults;
-            final tiles = <Widget>[];
-            // Web 不顯示 IAP；上架 iOS／Android App 後於原生環境顯示。
-            if (ps.enableIap && !kIsWeb) {
-              tiles.add(
-                ListTile(
-                  leading: const Icon(Icons.smartphone),
-                  title: const Text('App Store／Google Play'),
-                  subtitle: const Text('依裝置使用 App Store 或 Google Play 付款'),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _handleContinuePurchase(planName, plans);
-                  },
-                ),
-              );
-            }
-            if (ps.enableManual) {
-              final lang =
-                  Provider.of<LanguageProvider>(context, listen: false);
-              tiles.add(
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: ManualFpsPaymentButtonBlock(
-                    lang: lang,
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      _showManualTransferSheet(planName, plans);
-                    },
-                  ),
-                ),
-              );
-            }
-            if (tiles.isEmpty) {
+            final lang =
+                Provider.of<LanguageProvider>(context, listen: false);
+            if (!ps.enableManual) {
               return const Padding(
                 padding: EdgeInsets.all(24),
                 child: Text('管理員已暫停所有付款方式，請稍後再試。'),
@@ -313,7 +298,16 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
             return Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                ...tiles,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: ManualFpsPaymentButtonBlock(
+                    lang: lang,
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _showManualTransferSheet(planName, plans);
+                    },
+                  ),
+                ),
                 const SizedBox(height: 8),
               ],
             );

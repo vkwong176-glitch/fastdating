@@ -274,6 +274,12 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
     setState(() => _genderFilter = target);
   }
 
+  /// 與 [_sendChatInviteToPeer] 一致：短 id 或示範前綴視為非真實會員。
+  bool _isMockNearbyPeerId(String peerId) {
+    if (peerId.startsWith('demo_match_')) return true;
+    return peerId.length < 20;
+  }
+
   List<Map<String, dynamic>> get _filteredUsers {
     return _users.where((u) {
       final ug = (u['gender'] as String?)?.trim().toLowerCase() ?? 'male';
@@ -614,17 +620,15 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
   /// 與 [HomePage._sendChatInviteToPeer] 相同：送出席端邀聊（對方於邀聊通知接受後可聊）。
   /// 虛假／示範 id（短 id）與未登入時只提示，不寫雲端。
   Future<void> _sendChatInviteToPeer(String peerId, String peerName) async {
-    if (peerId.startsWith('demo_match_')) {
+    if (_isMockNearbyPeerId(peerId)) {
       if (!mounted) return;
+      final lang = Provider.of<LanguageProvider>(context, listen: false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('示範用戶僅供預覽，請在真實會員上使用邀請聊天')),
-      );
-      return;
-    }
-    if (peerId.length < 20) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('示範用戶僅供預覽，請在真實會員上使用邀請聊天')),
+        SnackBar(
+          content: Text(lang.nearbyDemoChatLine),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+        ),
       );
       return;
     }

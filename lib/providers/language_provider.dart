@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
+import '../utils/nearby_demo_strings.dart';
 import '../utils/cookie_constants.dart';
 import '../services/web_cookies.dart';
 
@@ -92,6 +93,18 @@ class LanguageProvider with ChangeNotifier {
     }
   }
 
+  /// 附近的人：示範／短 id 用戶邀聊提示（與 [NearbyDemoStrings] 一致，直接走此 getter 亦可）。
+  String get nearbyDemoChatLine {
+    switch (_currentLang) {
+      case LanguageType.zhTW:
+        return NearbyDemoStrings.zhTw;
+      case LanguageType.zhCN:
+        return NearbyDemoStrings.zhCn;
+      case LanguageType.en:
+        return NearbyDemoStrings.en;
+    }
+  }
+
   /// 活動／訂閱付款方式標籤。
   String paymentMethodLabelForActivity(String? code) {
     final c = code?.trim();
@@ -119,11 +132,41 @@ class LanguageProvider with ChangeNotifier {
     'phone': '手機號',
     'password': '密碼',
     'send_code': '發送驗證碼',
+    'signup_email_verification': '電郵驗證碼',
+    'signup_email_code_hint': '6 位數驗證碼',
+    'signup_get_code': '取得驗證碼',
+    'signup_code_sent': '驗證碼已寄出，請查收郵件',
+    'signup_verify': '驗證',
+    'signup_email_verified': '✓ 電郵已驗證',
+    'signup_need_verify': '請先驗證電郵',
+    'signup_err_invalid_email': '請輸入正確的電子郵件',
+    'signup_err_send_cooldown': '寄送過於頻繁，請稍候再試',
+    'signup_err_email_send_failed': '無法寄出驗證信，請稍後再試',
+    'signup_err_resend_unauthorized':
+        'Resend API 金鑰無效或已撤銷，請在後台重設 RESEND_API_KEY 後再部署。',
+    'signup_err_resend_domain':
+        '寄件網域尚未在 Resend 驗證。請到 Resend 驗證你的網域，並在雲端設定 RESEND_FROM（顯示名 <noreply@你的網域>）。',
+    'signup_err_resend_test_recipient':
+        '目前為 Resend 測試模式：只會寄到你在 Resend 後台允許的收件人。請在 Resend 加入測試信箱，或改驗證正式網域與寄件人。',
+    'signup_err_email_delivery_not_configured':
+        '郵件寄送尚未設定完成，無法寄出驗證碼。請稍後再試或聯絡我們。',
+    'signup_err_wrong_code': '驗證碼錯誤',
+    'signup_err_otp_expired': '驗證碼已過期，請重新取得',
+    'signup_err_no_otp_request': '請先按「取得驗證碼」',
+    'signup_err_email_not_verified': '請先通過電郵驗證',
+    'signup_err_gate_expired': '驗證已逾時，請重新取得驗證碼',
+    'signup_err_email_in_use': '此電子郵件已被註冊',
+    'signup_err_weak_password': '密碼需至少 6 個字元',
+    'signup_err_name_too_short': '登入名稱至少 4 個字元',
+    'signup_err_create_failed': '註冊失敗，請再試',
+    'signup_err_no_firebase': '系統未連線，暫時無法註冊',
     'forgot_pwd': '忘記密碼',
     'register': '註冊',
     'home': '首頁',
     'message': '訊息',
     'message_list_guest_hint': '請先登入以查看訊息',
+    'message_guest_dm_and_feed_hint':
+        '登入後可查看與會員的私人訊息；以下仍顯示全站宣傳與活動資訊（與網頁版相同）。',
     'message_page_free_chat_quota_tip':
         '未訂閱會員：每人每日可與兩位（不同名）會員免費聊天。',
     'profile': '個人',
@@ -132,6 +175,9 @@ class LanguageProvider with ChangeNotifier {
     'menu': '選單',
     'file': '檔案',
     'publish': '邀聊通知',
+    'publish_feed_empty_hint':
+        '暫時沒有符合條件的貼文；若管理員已發佈全站宣傳，下拉此頁或按下方即可重新載入。',
+    'publish_feed_retry': '重新載入貼文',
     'publish_invites_section_heading': '邀聊訊息',
     'publish_invites_section_intro':
         '不同會員經首頁發出邀請聊天通知時，邀請將顯示於此，你可選擇拒絕或接受。',
@@ -177,6 +223,7 @@ class LanguageProvider with ChangeNotifier {
     'home_first_tip_body': '請按右下方想講～按鍵填好個人資料，按開始聊天。',
     'nearby_top_tip_body':
         '若之前在首頁無按想講～填資料，請現按右下角想講～填返，之後篩選條件進行聊天。',
+    'nearby_demo_chat_hint': NearbyDemoStrings.zhTw,
     'cookie_banner_title': 'Cookie 與隱私',
     'cookie_banner_body':
         '我們使用必要 Cookie（含由伺服器設定的安全登入工作階段）以維持帳戶安全，並可儲存語言與顯示偏好。若你同意「分析」類別，我們會以匿名方式記錄頁面瀏覽摘要（不含聊天內容與密碼），以優化配對與服務。詳見設定內說明。',
@@ -727,11 +774,34 @@ class LanguageProvider with ChangeNotifier {
     'phone': '手机号',
     'password': '密码',
     'send_code': '发送验证码',
+    'signup_email_verification': '电邮验证码',
+    'signup_email_code_hint': '6 位数字验证码',
+    'signup_get_code': '取得验证码',
+    'signup_verify': '验证',
+    'signup_email_verified': '✓ 电邮已验证',
+    'signup_need_verify': '请先验证电邮',
+    'signup_err_invalid_email': '请输入正确的电邮',
+    'signup_err_send_cooldown': '发送过于频繁，请稍候再试',
+    'signup_err_email_send_failed': '无法寄出验证邮件，请稍后再试',
+    'signup_err_email_delivery_not_configured':
+        '邮件寄送尚未配置完成，无法寄出验证码。请稍后再试或联系我们。',
+    'signup_err_wrong_code': '验证码错误',
+    'signup_err_otp_expired': '验证码已过期，请重新取得',
+    'signup_err_no_otp_request': '请先按「取得验证码」',
+    'signup_err_email_not_verified': '请先通过电邮验证',
+    'signup_err_gate_expired': '验证已逾时，请重新取得验证码',
+    'signup_err_email_in_use': '此电邮已被注册',
+    'signup_err_weak_password': '密码需至少 6 个字符',
+    'signup_err_name_too_short': '登入名称至少 4 个字符',
+    'signup_err_create_failed': '注册失败，请重试',
+    'signup_err_no_firebase': '系统未连接，暂无法注册',
     'forgot_pwd': '忘记密码',
     'register': '注册',
     'home': '首页',
     'message': '消息',
     'message_list_guest_hint': '请先登录以查看消息',
+    'message_guest_dm_and_feed_hint':
+        '登录后可查看与会员的私人消息；以下仍显示全站宣传与活动信息（与网页版相同）。',
     'message_page_free_chat_quota_tip':
         '未订阅会员：每人每日可与两位（不同名）会员免费聊天。',
     'profile': '个人',
@@ -740,6 +810,9 @@ class LanguageProvider with ChangeNotifier {
     'menu': '菜单',
     'file': '档案',
     'publish': '邀聊通知',
+    'publish_feed_empty_hint':
+        '暂时没有符合条件的帖子；若管理员已发布全站宣传，下拉此页或点击下方即可重新载入。',
+    'publish_feed_retry': '重新载入帖子',
     'publish_invites_section_heading': '邀聊讯息',
     'publish_invites_section_intro':
         '不同会员经首页发出邀请聊天通知时，邀请将显示于此，你可选择拒绝或接受。',
@@ -785,6 +858,7 @@ class LanguageProvider with ChangeNotifier {
     'home_first_tip_body': '请按右下方想讲～按键填好个人资料，按开始聊天。',
     'nearby_top_tip_body':
         '若之前在首页无按想讲～填资料，请现按右下角想讲～补填，之后筛选条件进行聊天。',
+    'nearby_demo_chat_hint': NearbyDemoStrings.zhCn,
     'cookie_banner_title': 'Cookie 与隐私',
     'cookie_banner_body':
         '我们使用必要 Cookie（含由服务器设置的安全登录会话）以维持账户安全，并可保存语言与显示偏好。若你同意「分析」类别，我们会以匿名方式记录页面浏览摘要（不含聊天内容与密码），以优化配对与服务。',
@@ -1332,11 +1406,41 @@ class LanguageProvider with ChangeNotifier {
     'phone': 'Phone Number',
     'password': 'Password',
     'send_code': 'Send Code',
+    'signup_email_verification': 'Email verification',
+    'signup_email_code_hint': '6-digit code',
+    'signup_get_code': 'Get code',
+    'signup_code_sent': 'Verification code sent. Check your email.',
+    'signup_verify': 'Verify',
+    'signup_email_verified': '✓ Email verified',
+    'signup_need_verify': 'Please verify your email first',
+    'signup_err_invalid_email': 'Enter a valid email address',
+    'signup_err_send_cooldown': 'Too many requests. Please wait a moment',
+    'signup_err_email_send_failed': 'Could not send the email. Try again later',
+    'signup_err_resend_unauthorized':
+        'Resend API key is invalid. Update RESEND_API_KEY and redeploy.',
+    'signup_err_resend_domain':
+        'Sender domain is not verified in Resend. Verify your domain and set RESEND_FROM in cloud config.',
+    'signup_err_resend_test_recipient':
+        'Resend test mode: only certain recipients are allowed. Add a test address in the Resend dashboard, or verify your domain and From address.',
+    'signup_err_email_delivery_not_configured':
+        'Email delivery is not fully set up yet. Try again later or contact us.',
+    'signup_err_wrong_code': 'Incorrect code',
+    'signup_err_otp_expired': 'Code expired. Request a new one',
+    'signup_err_no_otp_request': 'Tap “Get code” first',
+    'signup_err_email_not_verified': 'Please verify your email first',
+    'signup_err_gate_expired': 'Verification window expired. Get a new code',
+    'signup_err_email_in_use': 'This email is already registered',
+    'signup_err_weak_password': 'Password must be at least 6 characters',
+    'signup_err_name_too_short': 'Login name needs at least 4 characters',
+    'signup_err_create_failed': 'Sign up failed. Please try again',
+    'signup_err_no_firebase': 'Not connected. Sign-up unavailable',
     'forgot_pwd': 'Forgot Password',
     'register': 'Register',
     'home': 'Home',
     'message': 'Message',
     'message_list_guest_hint': 'Sign in to view messages',
+    'message_guest_dm_and_feed_hint':
+        'Sign in to see private chats. Promotional posts below are shown to everyone, same as on the website.',
     'message_page_free_chat_quota_tip':
         'Non-subscribers: chat for free with up to two different members per calendar day.',
     'profile': 'Profile',
@@ -1345,6 +1449,9 @@ class LanguageProvider with ChangeNotifier {
     'menu': 'Menu',
     'file': 'Profile',
     'publish': 'Chat invites',
+    'publish_feed_empty_hint':
+        'No posts match the filters yet. Pull down to refresh, or tap below to reload site-wide announcements.',
+    'publish_feed_retry': 'Reload feed',
     'publish_invites_section_heading': 'Chat messages',
     'publish_invites_section_intro':
         'Invites sent from the home page appear here. You can decline or accept.',
@@ -1391,6 +1498,7 @@ class LanguageProvider with ChangeNotifier {
         'Use the One sentence button at the bottom right to complete your profile, then tap Start chatting.',
     'nearby_top_tip_body':
         'If you have not used One sentence on Home to fill in your details, tap One sentence at the bottom right to complete them, then set filters to find people to chat with.',
+    'nearby_demo_chat_hint': NearbyDemoStrings.en,
     'cookie_banner_title': 'Cookies & privacy',
     'cookie_banner_body':
         'We use essential cookies (including a secure login session set by the server) for account safety, and may store language and display preferences. If you accept analytics, we record anonymized page-view summaries (no chat text or passwords) to improve matching.',

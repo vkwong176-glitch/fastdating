@@ -83,6 +83,37 @@ class StoreIapService {
     );
   }
 
+  /// 消費型內購（可重複購買，如活動報名）；與 [buy] 相同之完成／逾時行為。
+  Future<PurchaseDetails> buyConsumable(
+    ProductDetails product, {
+    bool autoConsume = true,
+  }) async {
+    if (!supportedOnThisPlatform) {
+      throw UnsupportedError('內購僅適用於 iOS / Android');
+    }
+    await ensureListener();
+    final completer = Completer<PurchaseDetails>();
+    _pending = completer;
+    _pendingProductId = product.id;
+
+    final started = await _iap.buyConsumable(
+      purchaseParam: PurchaseParam(productDetails: product),
+      autoConsume: autoConsume,
+    );
+    if (!started) {
+      _clearPending();
+      throw StateError('無法開啟商店付款流程');
+    }
+
+    return completer.future.timeout(
+      const Duration(minutes: 5),
+      onTimeout: () {
+        _clearPending();
+        throw TimeoutException('購買逾時');
+      },
+    );
+  }
+
   /// 交付權益後務必呼叫，否則訂單會維持未確認狀態（Android 尤其重要）。
   Future<void> completePurchase(PurchaseDetails p) async {
     if (p.pendingCompletePurchase) {

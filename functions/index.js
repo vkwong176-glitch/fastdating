@@ -145,7 +145,7 @@ function buildManualNoticeMap({
   title,
   body,
 }) {
-  return {
+    return {
     type,
     orderId,
     cycle,

@@ -42,9 +42,8 @@ class AppConstants {
   static const Color signUpLinkBlue = Color(0xFF2196F3);
 
   /// 啟動頁／登入頁預設品牌橫幅（含「Explore Love, dating fastly」等）；管理員上傳圖時仍優先顯示上傳檔。
-  /// 使用 WebP 以減少首屏資產體積（同圖 PNG 明顯較大）。
   static const String brandingLoveBannerAsset =
-      'assets/images/branding_love_banner.webp';
+      'assets/images/app_brand_launch.png';
 
   /// 附近的人 API 根網址（留空則使用 mock 資料）
   /// 例：'https://your-api.com'，實際請求為 GET /api/nearby 或 /nearby

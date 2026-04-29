@@ -2362,8 +2362,8 @@ Widget _adminStandaloneAdCoopCard(
                           postId: promotionPostId,
                         ),
                         child: const Text('暫停'),
-                      ),
-                    ),
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton(

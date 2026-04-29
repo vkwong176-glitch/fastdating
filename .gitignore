@@ -90,6 +90,9 @@ backups/
 lib_backup/
 fastdating_old/
 
+# Keystore／簽署備份（勿提交）
+android/key.properties.save
+
 # 根目錄「點」開頭路徑（Git 的 /* 常不涵蓋這些，務必明確忽略）
 /.cursor/
 /.dart-tool/

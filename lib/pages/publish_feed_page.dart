@@ -22,9 +22,7 @@ import '../utils/launch_url_helper.dart';
 import '../utils/mock_data.dart';
 import '../widgets/main_tab_app_bar.dart';
 import '../widgets/chat_quota_gate.dart';
-import 'settings_page.dart';
 import 'chat_detail_page.dart';
-import 'activity_page.dart';
 
 /// 與登入頁一致：約 1cm ≈ 38 logical px；電腦版（寬螢幕）白框內字級 +0.4cm
 const double _kPublishDesktopFontBoost = 38.0 * 0.4;
@@ -425,23 +423,21 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
           ),
         ),
         const SizedBox(height: 12),
-        Builder(
-          builder: (context) {
-            final allPosts =
-                Provider.of<FeedProvider>(context).userPosts;
+        /// 用 [Consumer3] 明確依賴 [FeedProvider]／[SubscriptionProvider]，避免僅在 [StreamBuilder] 內
+        /// 用 [Builder] 時 Android 上偶發不隨遠端貼文更新而重建、宣傳貼文不顯示。
+        Consumer3<FeedProvider, SubscriptionProvider, LanguageProvider>(
+          builder: (context, feed, sub, lang, _) {
+            final allPosts = feed.userPosts;
             final weekPosts = allPosts
                 .where(_publishFeedPostWithinLastWeek)
                 .toList();
-            final hideAds = context
-                .watch<SubscriptionProvider>()
-                .shouldHideInFeedAdPromotions;
+            final hideAds = sub.shouldHideInFeedAdPromotions;
             final promotionPosts = hideAds
                 ? <UserPostItem>[]
                 : weekPosts.where((p) => p.isAdPromotion).toList();
             final normalPosts =
                 weekPosts.where((p) => !p.isAdPromotion).toList();
-            final posts =
-                mergePromotionItems<UserPostItem, UserPostItem>(
+            final posts = mergePromotionItems<UserPostItem, UserPostItem>(
               items: normalPosts,
               promotions: promotionPosts,
               pageSalt: 'publish_feed',
@@ -480,6 +476,32 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
                     ),
                   ),
                 ),
+                if (posts.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          lang.getString('publish_feed_empty_hint'),
+                          style: TextStyle(
+                            fontSize: 13 + desktopFs * 0.2,
+                            color: AppConstants.grey,
+                            height: 1.4,
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: () =>
+                                context.read<FeedProvider>().rebindRemoteStreams(),
+                            icon: const Icon(Icons.refresh, size: 18),
+                            label: Text(lang.getString('publish_feed_retry')),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             );
           },
@@ -536,16 +558,22 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-          AppConstants.padding,
-          _kPublishScrollTopInset,
-          AppConstants.padding,
-          AppConstants.padding,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      body: RefreshIndicator(
+        onRefresh: () async {
+          context.read<FeedProvider>().rebindRemoteStreams();
+          await Future<void>.delayed(const Duration(milliseconds: 500));
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(
+            AppConstants.padding,
+            _kPublishScrollTopInset,
+            AppConstants.padding,
+            AppConstants.padding,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             // 左手白框：待處理邀聊 + 不同人貼文
             Container(
               width: double.infinity,
@@ -613,7 +641,8 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
                 ),
               ],
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );
