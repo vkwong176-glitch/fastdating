@@ -21,6 +21,10 @@
 -keepattributes InnerClasses
 -dontwarn com.google.firebase.**
 -dontwarn com.google.android.gms.**
+# Auth／Google Sign-In（Release R8）：避免類別被拔除導致本機 Session 異常或非預期 sign-out
+-keep class com.google.firebase.auth.** { *; }
+-keep class com.google.android.gms.auth.** { *; }
+-keep class com.google.android.gms.common.** { *; }
 
 ## Google Play Billing／內購
 -keep class com.android.vending.billing.**

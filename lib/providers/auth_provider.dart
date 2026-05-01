@@ -13,10 +13,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../firebase_options.dart';
+import '../services/auth_session_cookie_service.dart';
 import '../services/firebase_bootstrap.dart';
 import '../services/user_firestore_service.dart';
-import '../services/auth_session_cookie_service.dart';
-bool _googleSignInInitialized = false;
 
 String? _authNonEmpty(String? s) {
   if (s == null) return null;
@@ -87,23 +86,51 @@ Future<String?> _emailFromGoogleUserInfoApi(String? accessToken) async {
   }
 }
 
-Future<void> _ensureGoogleSignInReady() async {
-  if (_googleSignInInitialized) return;
-  await GoogleSignIn.instance.initialize(
-    serverClientId: DefaultFirebaseOptions.googleOAuthWebClientId,
-  );
-  _googleSignInInitialized = true;
-}
+/// 行動 Google 憑證：含 `openid` 以利 ID token JWT 較一致帶出 email claim（僅 `'email'` 時部分裝置仍缺）。
+const List<String> _kGoogleOAuthScopes = <String>[
+  'openid',
+  'email',
+  'profile',
+];
+
+/// Firebase Android：SHA-1 與 google-services.json 不符時最常見徵狀為「選了 Gmail 後仍無 UID」。
+const String _kAndroidGoogleFirebaseMismatchHint =
+    '\n\n常見原因（網頁正常、Android 不行）：Firebase 尚未登錄「**目前建置這支 APK**」使用的簽署憑證 '
+    'SHA-1。請在 **android** 資料夾執行 `./gradlew signingReport`，將 **release**／**debug** 對應的 '
+    'SHA-1 加入 Firebase Console → Project settings → **Your apps** → Android '
+    '`com.fastdating1.app`，再下載新版 **google-services.json** 覆蓋 '
+    '`android/app/google-services.json`，最後重建安裝。';
 
 /// 登入狀態：Firebase 就緒時使用 Auth + Firestore；否則維持本機模擬（開發用）。
 class AuthProvider with ChangeNotifier {
+  /// [authStateChanges] 換 provider／OAuth 時可能短暫出現 [user]==null；用世代號忽略過期的延遲清除。
+  int _authStateEventGen = 0;
+
   AuthProvider() {
     if (FirebaseBootstrap.isReady) {
       _user = FirebaseAuth.instance.currentUser;
       _applyUser(_user);
       FirebaseAuth.instance.authStateChanges().listen((user) {
-        _user = user;
-        _applyUser(user);
+        final gen = ++_authStateEventGen;
+        if (user != null) {
+          _user = user;
+          _applyUser(user);
+          return;
+        }
+        // OAuth 換證中 SDK 偶有「先 null、再換成 Gmail」；若馬上 [_applyUser(null)]，
+        // 會讓 [isLoginMember]／登入頁門檻誤判（仍以為未登入／顯示無 UID）。
+        Future<void>.delayed(const Duration(milliseconds: 260), () {
+          if (!FirebaseBootstrap.isReady) return;
+          if (gen != _authStateEventGen) return;
+          final still = FirebaseAuth.instance.currentUser;
+          if (still != null) {
+            _user = still;
+            _applyUser(still);
+            return;
+          }
+          _user = null;
+          _applyUser(null);
+        });
       });
       // Web：Google redirect 回站後，currentUser 有時略晚於首幀，導致 isLogin 仍為 false
       if (kIsWeb) {
@@ -116,6 +143,24 @@ class AuthProvider with ChangeNotifier {
           const Duration(milliseconds: 600),
           _syncFirebaseUserIfNeeded,
         );
+      } else {
+        scheduleMicrotask(_syncFirebaseUserIfNeeded);
+        Future<void>.delayed(
+          const Duration(milliseconds: 400),
+          _syncFirebaseUserIfNeeded,
+        );
+        scheduleMicrotask(() async {
+          try {
+            await _hydrateGoogleSdkDisplayEmailFromPrefs();
+          } catch (e, st) {
+            debugPrint('Hydrate google sdk email prefs: $e\n$st');
+          }
+          try {
+            await _ensureMobileGoogleSignInInitialized();
+          } catch (e, st) {
+            debugPrint('Deferred Google Sign-In init: $e\n$st');
+          }
+        });
       }
     }
   }
@@ -136,8 +181,14 @@ class AuthProvider with ChangeNotifier {
   /// 設定頁等再拉 [User.reload] 與顯示用 email，避免 Android Google 登入後 [currentAccount] 仍空。
   Future<void> refreshCurrentAccountForDisplay() async {
     if (!FirebaseBootstrap.isReady) return;
+    if (!kIsWeb) {
+      await refreshGoogleSdkAccountHintForUi();
+    }
     final u = FirebaseAuth.instance.currentUser;
-    if (u == null) return;
+    if (u == null) {
+      notifyListeners();
+      return;
+    }
     try {
       await u.reload();
     } catch (e, st) {
@@ -147,9 +198,7 @@ class AuthProvider with ChangeNotifier {
     if (fresh == null) return;
     _user = fresh;
     _applyUser(fresh);
-    if (_authNonEmpty(_currentAccount) == null) {
-      await _syncAccountLabelIfMissing();
-    }
+    await _syncAccountLabelIfMissing();
   }
 
   User? _user;
@@ -175,7 +224,46 @@ class AuthProvider with ChangeNotifier {
   String? get currentAccountForUi =>
       _authNonEmpty(_currentAccount) ??
       _authNonEmpty(_googleSignInAccountEmail) ??
+      _authNonEmpty(_googleSdkIdentityEmail) ??
       _authNonEmpty(_user?.displayName);
+
+  /// [SettingsPage] 專用：與 Firebase 登入狀態對齊，並吃滿 [_currentAccount]／Google ／token／Firestore 等後備，
+  /// 勿僅依賴 [User.email]（Android Google 常有短暫 null）。
+  String get settingsAccountLabel {
+    if (!FirebaseBootstrap.isReady) {
+      return _isLogin ? (currentAccountForUi ?? '—') : '未登入';
+    }
+    // 與 AuthProvider 內部狀態對齊：少數裝置／時序下 [FirebaseAuth.instance.currentUser] 與 [_user] 可能短暫不一致。
+    final syncUser = FirebaseAuth.instance.currentUser ?? _user;
+    if (syncUser == null) {
+      final sdkMail = _authNonEmpty(_googleSdkIdentityEmail);
+      if (sdkMail != null) return sdkMail;
+      return '未登入';
+    }
+    if (syncUser.isAnonymous) {
+      final sdkMail = _authNonEmpty(_googleSdkIdentityEmail);
+      if (sdkMail != null) {
+        return '$sdkMail（Firebase 為訪客狀態，請完成會員登入）';
+      }
+      final id = syncUser.uid;
+      final short = id.length > 14 ? '${id.substring(0, 10)}…' : id;
+      return '訪客（匿名 UID $short）請改用 Google／Email／密碼登入會員';
+    }
+
+    final fromUi = _authNonEmpty(currentAccountForUi);
+    if (fromUi != null) return fromUi;
+
+    final direct = _authNonEmpty(_emailForDisplayFromUser(syncUser));
+    if (direct != null) return direct;
+
+    return '—';
+  }
+
+  bool _googleMobileSignInInitialized = false;
+  StreamSubscription<GoogleSignInAuthenticationEvent>? _googleAuthEventsSub;
+
+  /// Google Sign-In SDK 帳戶 email（Firebase 尚未帶入 currentUser 時仍供設定列顯示）。
+  String? _googleSdkIdentityEmail;
 
   /// 行動版 Google 登入時在 [signInWithCredential] 前先快取，避免 Auth 一時帶不出 email 時畫面僅顯示「—」。
   String? _googleSignInAccountEmail;
@@ -190,6 +278,7 @@ class AuthProvider with ChangeNotifier {
   static const String _prefsGenderKey = 'profile_gender';
   static const String _prefsCachedAccountUid = 'auth_cached_display_uid';
   static const String _prefsCachedAccountEmail = 'auth_cached_display_email';
+  static const String _prefsGoogleSdkDisplayEmail = 'google_sdk_display_email';
 
   /// 避免登入時啟動的 [fetchUserGender] 較晚返回，覆寫使用者已在 [setProfileGender] 選好的值。
   int _genderLoadGeneration = 0;
@@ -244,6 +333,39 @@ class AuthProvider with ChangeNotifier {
       await prefs.remove(_prefsCachedAccountEmail);
     } catch (err, st) {
       debugPrint('_clearCachedDisplayEmail: $err\n$st');
+    }
+  }
+
+  Future<void> _persistGoogleSdkDisplayEmail(String raw) async {
+    final email = _authNonEmpty(raw);
+    if (email == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefsGoogleSdkDisplayEmail, email);
+    } catch (err, st) {
+      debugPrint('_persistGoogleSdkDisplayEmail: $err\n$st');
+    }
+  }
+
+  Future<void> _clearGoogleSdkDisplayEmailPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_prefsGoogleSdkDisplayEmail);
+    } catch (err, st) {
+      debugPrint('_clearGoogleSdkDisplayEmailPrefs: $err\n$st');
+    }
+  }
+
+  Future<void> _hydrateGoogleSdkDisplayEmailFromPrefs() async {
+    if (kIsWeb || !FirebaseBootstrap.isReady) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final e = _authNonEmpty(prefs.getString(_prefsGoogleSdkDisplayEmail));
+      if (e == null || _googleSdkIdentityEmail != null) return;
+      _googleSdkIdentityEmail = e;
+      notifyListeners();
+    } catch (err, st) {
+      debugPrint('_hydrateGoogleSdkDisplayEmailFromPrefs: $err\n$st');
     }
   }
 
@@ -333,6 +455,18 @@ class AuthProvider with ChangeNotifier {
     if (r == null) return;
     _currentAccount = r;
     unawaited(_cacheDisplayEmailForUid(id, r));
+    final cu = FirebaseAuth.instance.currentUser;
+    if (cu != null &&
+        cu.uid == id &&
+        _authNonEmpty(_emailForDisplayFromUser(cu)) == null &&
+        r.contains('@')) {
+      unawaited(
+        UserFirestoreService.instance.ensureUserProfile(
+          user: cu,
+          emailOverride: r,
+        ),
+      );
+    }
     notifyListeners();
   }
 
@@ -593,6 +727,190 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// 行動裝置：初始化 Google Sign-In 並訂閱 [authenticationEvents]，補足設定頁可顯示之 Gmail。
+  Future<void> _ensureMobileGoogleSignInInitialized() async {
+    if (kIsWeb || !FirebaseBootstrap.isReady) return;
+    if (_googleMobileSignInInitialized) return;
+    await GoogleSignIn.instance.initialize(
+      serverClientId: DefaultFirebaseOptions.googleOAuthWebClientId,
+    );
+    _googleAuthEventsSub ??=
+        GoogleSignIn.instance.authenticationEvents.listen(
+      (GoogleSignInAuthenticationEvent event) {
+        if (event is GoogleSignInAuthenticationEventSignIn) {
+          final e = _authNonEmpty(event.user.email);
+          _googleSdkIdentityEmail = e;
+          if (e != null) {
+            unawaited(_persistGoogleSdkDisplayEmail(e));
+          }
+          notifyListeners();
+        } else if (event is GoogleSignInAuthenticationEventSignOut) {
+          _googleSdkIdentityEmail = null;
+          unawaited(_clearGoogleSdkDisplayEmailPrefs());
+          notifyListeners();
+        }
+      },
+      onError: (Object e, StackTrace st) {
+        debugPrint('GoogleSignIn.authenticationEvents: $e\n$st');
+      },
+    );
+    _googleMobileSignInInitialized = true;
+  }
+
+  /// 設定頁進入時：嘗試靜默還原本機曾選過的 Google 帳戶 email（不要求互動 UI）。
+  Future<void> refreshGoogleSdkAccountHintForUi() async {
+    if (kIsWeb || !FirebaseBootstrap.isReady) return;
+    try {
+      await _ensureMobileGoogleSignInInitialized();
+      final lightweightFut =
+          GoogleSignIn.instance.attemptLightweightAuthentication();
+      if (lightweightFut != null) {
+        final GoogleSignInAccount? acct = await lightweightFut;
+        if (acct == null) return;
+        final e = _authNonEmpty(acct.email);
+        if (e != null && _googleSdkIdentityEmail != e) {
+          _googleSdkIdentityEmail = e;
+          unawaited(_persistGoogleSdkDisplayEmail(e));
+          notifyListeners();
+        }
+      }
+    } catch (e, st) {
+      debugPrint('refreshGoogleSdkAccountHintForUi: $e\n$st');
+    }
+  }
+
+  /// Android／iOS／macOS：`google_sign_in` + Firebase [signInWithCredential]。
+  ///
+  /// Android 額外在 [invalid-credential] 時 [GoogleSignIn.signOut] 後重試一輪，並附 SHA-1 指引。
+  Future<String?> _signInWithGoogleNativeMobile() async {
+    await _ensureMobileGoogleSignInInitialized();
+
+    Future<String?> runOnce() async {
+      late final GoogleSignInAccount account;
+      try {
+        account = await GoogleSignIn.instance.authenticate(
+          scopeHint: _kGoogleOAuthScopes,
+        );
+      } on GoogleSignInException catch (e) {
+        if (e.code == GoogleSignInExceptionCode.canceled ||
+            e.code == GoogleSignInExceptionCode.interrupted) {
+          return null;
+        }
+        return e.description ?? e.toString();
+      }
+      final GoogleSignInAuthentication googleAuth = account.authentication;
+      String? accessToken;
+      try {
+        final authed =
+            await account.authorizationClient.authorizationForScopes(
+              _kGoogleOAuthScopes,
+            );
+        accessToken = authed?.accessToken;
+      } catch (e, st) {
+        debugPrint('Google authorizationForScopes: $e\n$st');
+      }
+      if (googleAuth.idToken == null && accessToken == null) {
+        try {
+          final authed2 =
+              await account.authorizationClient.authorizeScopes(
+            _kGoogleOAuthScopes,
+          );
+          accessToken = authed2.accessToken;
+        } catch (e, st) {
+          debugPrint('Google authorizeScopes: $e\n$st');
+        }
+      }
+      if (googleAuth.idToken == null && _authNonEmpty(accessToken) == null) {
+        return '未取得 Google Id Token／Access Token，無法與 Firebase 換證。'
+            '$_kAndroidGoogleFirebaseMismatchHint';
+      }
+
+      var resolvedGoogleEmail = _authNonEmpty(account.email) ??
+          _emailFromIdTokenString(googleAuth.idToken);
+      if (resolvedGoogleEmail == null && accessToken != null) {
+        resolvedGoogleEmail =
+            await _emailFromGoogleUserInfoApi(accessToken);
+      }
+      _googleSignInAccountEmail = resolvedGoogleEmail;
+      {
+        final hint = _authNonEmpty(resolvedGoogleEmail);
+        if (hint != null) {
+          _googleSdkIdentityEmail = hint;
+          unawaited(_persistGoogleSdkDisplayEmail(hint));
+        }
+      }
+      final credential = GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+        accessToken: accessToken,
+      );
+      final cred =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+      if (cred.user == null || FirebaseAuth.instance.currentUser == null) {
+        return 'Google 已授權，但無法取得 Firebase 使用者／UID（工作階段未建立）。'
+            '$_kAndroidGoogleFirebaseMismatchHint';
+      }
+      // 登入後再取一次 scopes／userinfo（部分機型首輪 JWT 無 email）。
+      if (_authNonEmpty(resolvedGoogleEmail) == null) {
+        try {
+          String? retryToken = accessToken;
+          retryToken ??= (await account.authorizationClient.authorizationForScopes(
+            _kGoogleOAuthScopes,
+          ))
+              ?.accessToken;
+          retryToken ??= (await account.authorizationClient
+                  .authorizeScopes(_kGoogleOAuthScopes))
+              .accessToken;
+          resolvedGoogleEmail =
+              await _emailFromGoogleUserInfoApi(retryToken);
+        } catch (e, st) {
+          debugPrint('Google post-signIn userinfo retry: $e\n$st');
+        }
+      }
+      _googleSignInAccountEmail = resolvedGoogleEmail;
+      {
+        final hint = _authNonEmpty(resolvedGoogleEmail);
+        if (hint != null) {
+          _googleSdkIdentityEmail = hint;
+          unawaited(_persistGoogleSdkDisplayEmail(hint));
+        }
+      }
+      return await _finalizeGoogleOAuthSignIn(
+        cred,
+        googleAccountEmail: resolvedGoogleEmail,
+      );
+    }
+
+    FirebaseAuthException? lastAuthErr;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        return await runOnce();
+      } on FirebaseAuthException catch (e) {
+        lastAuthErr = e;
+        final retry = attempt == 0 &&
+            defaultTargetPlatform == TargetPlatform.android &&
+            (e.code == 'invalid-credential' ||
+                e.code == 'user-not-found' ||
+                e.code == 'credential-already-in-use' ||
+                e.code == 'account-exists-with-different-credential');
+        if (!retry) {
+          return '${_firebaseAuthMessage(e)}'
+              '${defaultTargetPlatform == TargetPlatform.android ? _kAndroidGoogleFirebaseMismatchHint : ''}';
+        }
+        debugPrint(
+          'signInWithGoogle: Android retry after GoogleSignIn.signOut (${e.code})',
+        );
+        try {
+          await GoogleSignIn.instance.signOut();
+        } catch (_) {}
+      }
+    }
+    if (lastAuthErr != null) {
+      return '${_firebaseAuthMessage(lastAuthErr)}'
+          '${defaultTargetPlatform == TargetPlatform.android ? _kAndroidGoogleFirebaseMismatchHint : ''}';
+    }
+    return 'Google 登入未完成，請再試一次。';
+  }
+
   /// Google 登入（Firebase Auth）。Web 優先 [signInWithPopup]（同頁完成並走 [_finalizeOAuthSignIn]）；
   /// 僅在彈窗被阻擋時改 [signInWithRedirect]。Android／iOS／macOS 用 [google_sign_in]。
   Future<String?> signInWithGoogle() async {
@@ -600,11 +918,11 @@ class AuthProvider with ChangeNotifier {
       return 'Firebase 未連線，無法使用 Google 登入';
     }
     try {
-      UserCredential cred;
       if (kIsWeb) {
         try {
-          cred = await FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider());
-          return await _finalizeOAuthSignIn(cred);
+          final cred =
+              await FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider());
+          return await _finalizeGoogleOAuthSignIn(cred);
         } on FirebaseAuthException catch (e) {
           // 僅「彈窗被阻擋」時改整頁導向；使用者關閉彈窗勿改 redirect。
           if (e.code == 'popup-blocked' ||
@@ -622,73 +940,7 @@ class AuthProvider with ChangeNotifier {
           case TargetPlatform.android:
           case TargetPlatform.iOS:
           case TargetPlatform.macOS:
-            await _ensureGoogleSignInReady();
-            late final GoogleSignInAccount account;
-            try {
-              account = await GoogleSignIn.instance.authenticate(
-                scopeHint: const ['email', 'profile'],
-              );
-            } on GoogleSignInException catch (e) {
-              if (e.code == GoogleSignInExceptionCode.canceled ||
-                  e.code == GoogleSignInExceptionCode.interrupted) {
-                return null;
-              }
-              return e.description ?? e.toString();
-            }
-            // 必須在 [signInWithCredential] 前設定，[authStateChanges] 觸發 [_applyUser] 時才讀得到。
-            // 部分 Android 上 [account.email]／id token 皆無 email，需先有 access token 再呼 userinfo。
-            final auth = account.authentication;
-            String? accessToken;
-            try {
-              final authed = await account.authorizationClient
-                  .authorizationForScopes(const ['email', 'profile']);
-              accessToken = authed?.accessToken;
-            } catch (e, st) {
-              debugPrint('Google authorizationForScopes: $e\n$st');
-            }
-            if (auth.idToken == null && accessToken == null) {
-              try {
-                final authed2 = await account.authorizationClient
-                    .authorizeScopes(const ['email', 'profile']);
-                accessToken = authed2.accessToken;
-              } catch (e, st) {
-                debugPrint('Google authorizeScopes: $e\n$st');
-              }
-            }
-            var resolvedGoogleEmail = _authNonEmpty(account.email) ??
-                _emailFromIdTokenString(auth.idToken);
-            if (resolvedGoogleEmail == null && accessToken != null) {
-              resolvedGoogleEmail =
-                  await _emailFromGoogleUserInfoApi(accessToken);
-            }
-            _googleSignInAccountEmail = resolvedGoogleEmail;
-            final credential = GoogleAuthProvider.credential(
-              idToken: auth.idToken,
-              accessToken: accessToken,
-            );
-            cred = await FirebaseAuth.instance.signInWithCredential(credential);
-            // 登入後再取一次 scopes／userinfo（部分機型首輪 JWT 無 email）。
-            if (_authNonEmpty(resolvedGoogleEmail) == null) {
-              try {
-                String? retryToken = accessToken;
-                retryToken ??= (await account.authorizationClient.authorizationForScopes(
-                  const ['email', 'profile'],
-                ))
-                    ?.accessToken;
-                retryToken ??= (await account.authorizationClient
-                        .authorizeScopes(const ['email', 'profile']))
-                    .accessToken;
-                resolvedGoogleEmail =
-                    await _emailFromGoogleUserInfoApi(retryToken);
-              } catch (e, st) {
-                debugPrint('Google post-signIn userinfo retry: $e\n$st');
-              }
-            }
-            _googleSignInAccountEmail = resolvedGoogleEmail;
-            return await _finalizeOAuthSignIn(
-              cred,
-              googleAccountEmail: resolvedGoogleEmail,
-            );
+            return await _signInWithGoogleNativeMobile();
           default:
             return '此平台請使用網頁版 Google 登入，或以 Email 登入';
         }
@@ -759,61 +1011,111 @@ class AuthProvider with ChangeNotifier {
     return '微信登入尚未開放，請使用 Google、Apple 或 Email／密碼。';
   }
 
+  /// Google 登入成功（含 Web popup／行動 credential）後，印出 Firebase 使用者 email 供確認。
+  Future<String?> _finalizeGoogleOAuthSignIn(
+    UserCredential cred, {
+    String? googleAccountEmail,
+  }) async {
+    final err = await _finalizeOAuthSignIn(
+      cred,
+      googleAccountEmail: googleAccountEmail,
+    );
+    if (err == null) {
+      debugPrint(
+        'signInWithGoogle: FirebaseAuth.instance.currentUser?.email = '
+        '${FirebaseAuth.instance.currentUser?.email}',
+      );
+    }
+    return err;
+  }
+
   Future<String?> _finalizeOAuthSignIn(
     UserCredential cred, {
     String? googleAccountEmail,
   }) async {
-    final u = cred.user;
-    if (u == null) return '登入失敗';
-    try {
-      await u.reload();
-    } catch (_) {}
-    final fresh = FirebaseAuth.instance.currentUser;
+    User? fresh = cred.user;
     if (fresh == null) return '登入失敗';
-    String? emailForProfile = _authNonEmpty(fresh.email) ??
-        _emailForDisplayFromUser(fresh) ??
-        _authNonEmpty(googleAccountEmail) ??
-        _authNonEmpty(_googleSignInAccountEmail);
-    if (emailForProfile == null) {
+
+    String? emailForProfile;
+    for (var attempt = 0; attempt < 4; attempt++) {
+      final toReload = fresh;
+      if (toReload == null) return '登入失敗';
+      try {
+        await toReload.reload();
+      } catch (_) {}
+      fresh = FirebaseAuth.instance.currentUser;
+      if (fresh == null) return '登入失敗';
+
+      emailForProfile = _authNonEmpty(fresh.email) ??
+          _emailForDisplayFromUser(fresh) ??
+          _authNonEmpty(googleAccountEmail) ??
+          _authNonEmpty(_googleSignInAccountEmail);
+      if (emailForProfile != null) break;
+
       try {
         final t = await fresh.getIdToken(true);
         emailForProfile = _emailFromIdTokenString(t);
+        if (emailForProfile != null) break;
       } catch (e, st) {
-        debugPrint('OAuth getIdToken for email: $e\n$st');
+        debugPrint('OAuth getIdToken for email attempt $attempt: $e\n$st');
       }
     }
+    final synced = fresh!;
     try {
       await UserFirestoreService.instance.ensureUserProfile(
-        user: fresh,
+        user: synced,
         emailOverride: emailForProfile,
       );
-      await UserFirestoreService.instance.seedPublicProfileIfMissing(fresh.uid);
-    } on FirebaseException catch (e) {
-      await FirebaseAuth.instance.signOut();
-      return _firebaseCoreMessage(e);
+      await UserFirestoreService.instance.seedPublicProfileIfMissing(synced.uid);
+    } on FirebaseException catch (e, st) {
+      // 勿因 Firestore／權限問題登出：否則設定頁會變「未登入」且與 Google 已成功換證的認知不符。
+      debugPrint(
+        'OAuth finalize: Firestore sync failed (Firebase user kept signed in): '
+        '${e.code} ${e.message}\n$st',
+      );
+      debugPrint('OAuth finalize: ${_firebaseCoreMessage(e)}');
     }
     // [authStateChanges] 不會因 [User.reload] 再觸發；reload 後才出現的 email 須在這裡重算 [currentAccount]。
-    _user = fresh;
-    _applyUser(fresh);
+    _user = synced;
+    _applyUser(synced);
     if (_authNonEmpty(_currentAccount) == null) {
       String? display = _authNonEmpty(emailForProfile);
       display ??= _authNonEmpty(googleAccountEmail) ??
           _authNonEmpty(_googleSignInAccountEmail);
       try {
-        display ??= _emailFromIdTokenString(await fresh.getIdToken(true));
+        display ??= _emailFromIdTokenString(await synced.getIdToken(true));
       } catch (_) {}
-      display ??= await UserFirestoreService.instance.fetchUserEmailForUid(fresh.uid);
+      display ??=
+          await UserFirestoreService.instance.fetchUserEmailForUid(synced.uid);
       if (display != null) {
         _currentAccount = display;
-        unawaited(_cacheDisplayEmailForUid(fresh.uid, display));
+        unawaited(_cacheDisplayEmailForUid(synced.uid, display));
         notifyListeners();
       }
     }
     final toCache = _authNonEmpty(_currentAccount) ?? emailForProfile;
     if (toCache != null) {
-      unawaited(_cacheDisplayEmailForUid(fresh.uid, toCache));
+      unawaited(_cacheDisplayEmailForUid(synced.uid, toCache));
     }
-    unawaited(_syncAccountLabelIfMissing());
+    await _syncAccountLabelIfMissing();
+    // 最後一眼：Firestore 異步或規則失敗後，仍能靠 Google OAuth 快照顯示帳號。
+    if (_authNonEmpty(_currentAccount) == null) {
+      final fb = _authNonEmpty(emailForProfile) ??
+          _authNonEmpty(googleAccountEmail) ??
+          _authNonEmpty(_googleSignInAccountEmail) ??
+          _emailForDisplayFromUser(synced);
+      if (fb != null) {
+        _currentAccount = fb;
+        unawaited(_cacheDisplayEmailForUid(synced.uid, fb));
+        notifyListeners();
+      }
+    }
+    final persistHint = _authNonEmpty(_currentAccount) ??
+        _authNonEmpty(emailForProfile) ??
+        _authNonEmpty(googleAccountEmail);
+    if (persistHint != null) {
+      unawaited(_persistGoogleSdkDisplayEmail(persistHint));
+    }
     return null;
   }
 
@@ -822,8 +1124,10 @@ class AuthProvider with ChangeNotifier {
       await AuthSessionCookieService.instance.clearOnLogout();
     }
     await _clearCachedDisplayEmail();
+    _googleSdkIdentityEmail = null;
+    await _clearGoogleSdkDisplayEmailPrefs();
     if (FirebaseBootstrap.isReady) {
-      if (!kIsWeb && _googleSignInInitialized) {
+      if (!kIsWeb && _googleMobileSignInInitialized) {
         try {
           await GoogleSignIn.instance.signOut();
         } catch (_) {}

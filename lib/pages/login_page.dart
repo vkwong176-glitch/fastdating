@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
@@ -5,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import '../utils/constants.dart';
 import '../utils/responsive_layout.dart';
 import '../widgets/pressable_opacity.dart';
@@ -45,6 +48,64 @@ class _LoginPageState extends State<LoginPage> {
   void _goToMain() {
     if (!mounted) return;
     context.go('/main');
+  }
+
+  /// Firebase 就緒時：僅在已取得「非匿名」會員身分後才進入主流程。
+  /// Google／Apple 換證結束後若馬上呼叫含 [User.reload] 的流程，少數機型會短暫讀不到 [currentUser]，
+  /// 易被誤判為「無 UID」。[syncFromFirebaseAuth] 後若 [AuthProvider.isLoginMember] 或 Firebase 已可判為會員，可先進入主畫面並於背景刷新顯示用 email。
+  Future<void> _goMainIfFirebaseMemberOrSnack(
+    AuthProvider auth, {
+    bool lastStepWasOAuth = false,
+  }) async {
+    if (!mounted) return;
+    if (!FirebaseBootstrap.isReady) {
+      _goToMain();
+      return;
+    }
+    auth.syncFromFirebaseAuth();
+
+    bool firebaseMember(User? u) => u != null && !u.isAnonymous;
+
+    final uEarly = FirebaseAuth.instance.currentUser;
+    if (firebaseMember(uEarly) || auth.isLoginMember) {
+      unawaited(auth.refreshCurrentAccountForDisplay());
+      if (!mounted) return;
+      _goToMain();
+      return;
+    }
+
+    await auth.refreshCurrentAccountForDisplay();
+    if (!mounted) return;
+    final u = FirebaseAuth.instance.currentUser;
+    if (firebaseMember(u) || auth.isLoginMember) {
+      _goToMain();
+      return;
+    }
+
+    final String msg;
+    if (u != null && u.isAnonymous) {
+      msg =
+          '目前為 Firebase 訪客（匿名）工作階段，請改用 Google 或 Email／密碼完成會員登入。';
+    } else if (lastStepWasOAuth) {
+      msg = '未取得 Firebase 會員身分。請在 Google／Apple 畫面上完成選帳號並同意授權；若你已關閉視窗，請再試一次。'
+          '若仍失敗，請確認 APK 為最新並已完整解除安裝後重裝，且在 Firebase 專案登記 ./gradlew signingReport 對應的 SHA-1。';
+    } else {
+      msg = '未能建立 Firebase 會員登入（無 UID）。請確認 APK 為最新建置、已移除舊版後重裝；並在 Firebase 專案中登記此簽署的 SHA-1（android 目錄下 ./gradlew signingReport）。';
+    }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  /// MIUI／部分 Android 換證後 [FirebaseAuth.currentUser]／[AuthProvider.isLoginMember] 會延遲半秒內才就緒。
+  Future<void> _giveFirebaseMomentAfterOAuth(AuthProvider auth) async {
+    if (kIsWeb || !FirebaseBootstrap.isReady) return;
+    for (var i = 0; i < 10; i++) {
+      if (!mounted) return;
+      auth.syncFromFirebaseAuth();
+      final u = FirebaseAuth.instance.currentUser;
+      if (u != null && !u.isAnonymous) return;
+      if (auth.isLoginMember) return;
+      await Future<void>.delayed(const Duration(milliseconds: 55));
+    }
   }
 
   @override
@@ -186,7 +247,7 @@ class _LoginPageState extends State<LoginPage> {
       });
     }
     if (!mounted) return;
-    _goToMain();
+    await _goMainIfFirebaseMemberOrSnack(auth);
   }
 
   /// 僅在 iOS／macOS 顯示（符合 App 審查指南 4.8：在提供第三方帳戶登入的 App 上須同時提供「使用 Apple 登入」）。
@@ -207,7 +268,9 @@ class _LoginPageState extends State<LoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
         return;
       }
-      _goToMain();
+      await _giveFirebaseMomentAfterOAuth(auth);
+      if (!mounted) return;
+      await _goMainIfFirebaseMemberOrSnack(auth, lastStepWasOAuth: true);
     } finally {
       if (mounted) setState(() => _oauthBusy = false);
     }
@@ -236,7 +299,9 @@ class _LoginPageState extends State<LoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
         return;
       }
-      _goToMain();
+      await _giveFirebaseMomentAfterOAuth(auth);
+      if (!mounted) return;
+      await _goMainIfFirebaseMemberOrSnack(auth, lastStepWasOAuth: true);
     } finally {
       if (mounted) setState(() => _oauthBusy = false);
     }

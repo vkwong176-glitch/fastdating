@@ -50,7 +50,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final langProvider = Provider.of<LanguageProvider>(context);
-    final authProvider = Provider.of<AuthProvider>(context);
+    final authProvider = context.watch<AuthProvider>();
     final fontSizeProvider = Provider.of<FontSizeProvider>(context);
     final isMobile = _isMobileLayout(context);
     final mobileFs = isMobile ? AppConstants.logicalPxPerCm * 0.1 : 0.0;
@@ -204,28 +204,14 @@ class _SettingsPageState extends State<SettingsPage> {
           _section(
             langProvider.getString('account'),
             [
-              StreamBuilder<User?>(
-                stream: FirebaseAuth.instance.authStateChanges(),
-                builder: (context, snapshot) {
-                  final user =
-                      snapshot.data ?? FirebaseAuth.instance.currentUser;
-                  final String accountValue;
-                  if (user == null) {
-                    accountValue = '未登入';
-                  } else {
-                    final email = user.email;
-                    accountValue =
-                        (email != null && email.isNotEmpty) ? email : '—';
-                  }
-                  return _rowWithValue(
-                    icon: Icons.person,
-                    title: langProvider.getString('current_account'),
-                    value: accountValue,
-                    fontSizeExtra: contentFontExtra,
-                    mobileFontExtra: mobileFs,
-                    valueColor: isMobile ? Colors.black : AppConstants.grey,
-                  );
-                },
+              // [AuthProvider] 已訂閱 authStateChanges(); 此處直接用 watch 即可，避免巢狀 rebuild 與狀態分叉。
+              _rowWithValue(
+                icon: Icons.person,
+                title: langProvider.getString('current_account'),
+                value: authProvider.settingsAccountLabel,
+                fontSizeExtra: contentFontExtra,
+                mobileFontExtra: mobileFs,
+                valueColor: isMobile ? Colors.black : AppConstants.grey,
               ),
               _rowWithArrow(
                 icon: Icons.history,

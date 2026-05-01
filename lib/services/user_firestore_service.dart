@@ -181,11 +181,14 @@ class UserFirestoreService {
         displayName = prev.trim();
       }
     }
+    // 勿將空字串 merge 進 `email`，否則 Android Google 當下 Auth 無 email 時會把會員文件中既有信箱蓋掉。
     final data = <String, dynamic>{
-      'email': email,
       'displayName': displayName,
       'updatedAt': FieldValue.serverTimestamp(),
     };
+    if (email.isNotEmpty) {
+      data['email'] = email;
+    }
     if (!existing.exists) {
       data['createdAt'] = FieldValue.serverTimestamp();
     }
