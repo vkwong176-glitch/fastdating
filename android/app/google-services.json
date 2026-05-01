@@ -14,11 +14,35 @@
       },
       "oauth_client": [
         {
-          "client_id": "780058794247-9eip7q3qps7g4uo2923otcv7phn9k74d.apps.googleusercontent.com",
+          "client_id": "780058794247-0mqjbeogj8dmpceua1vrucn7cgsulm9v.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.fastdating1.app",
-            "certificate_hash": "5d42f6e08d7ec20fc544b5964b279dc9d923c2c0"
+            "certificate_hash": "2a5833cf40f39a1667f548c8e5fa2bebf60d1ea1"
+          }
+        },
+        {
+          "client_id": "780058794247-1fvuns2t9qf5h25sf1nfn3jl3tcdbu8b.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.fastdating1.app",
+            "certificate_hash": "14f4d67a9d6167e78bae2a2ada059f17df28f3a7"
+          }
+        },
+        {
+          "client_id": "780058794247-6fab6ioc2np5i2sdr7nn51gbkccg965t.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.fastdating1.app",
+            "certificate_hash": "8ae22da32c6938fe03be44ce1180053742f910af"
+          }
+        },
+        {
+          "client_id": "780058794247-l3drf5f0fc9mgohttcga4jhbtehq161k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.fastdating1.app",
+            "certificate_hash": "9a11b8e54a942e83eaae35cdfb142d428a283f96"
           }
         },
         {

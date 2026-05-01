@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../providers/nav_provider.dart';
 import '../utils/constants.dart';
 import '../widgets/upgrade_matching_form.dart';
 
@@ -14,7 +16,15 @@ class UpgradeMatchingPage extends StatelessWidget {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => context.go('/home'),
+          onPressed: () {
+            final navigator = Navigator.maybeOf(context);
+            if (navigator != null && navigator.canPop()) {
+              navigator.pop();
+            }
+            if (!context.mounted) return;
+            context.read<NavProvider>().setCurrentIndex(0);
+            context.go('/home');
+          },
         ),
         automaticallyImplyLeading: false,
         title: Text(

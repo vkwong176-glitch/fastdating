@@ -1,26 +1,125 @@
 rules_version = '2';
-// Fast Dating｜Firestore 安全規則
-// ───────────────────────────────────────────────────────────────
-// 與 App 內 [FirestorePaths.users] 一致：會員文件在集合 **「users」**，
-// 文件 ID 為 **Firebase Authentication 的 UID**（非 Console 自建之其它集合，
-// 例如獨立的「UID／test_user_001」並非本 App 會員入口）。
+// Fast Dating｜Firestore 安全規則（Web / Android 分區編排）
+// ─────────────────────────────────────────────────────────────
+// ■ 規則「獨立處理」方式
+//   1. 【現狀相容】底下多數集合仍為「任一已登入 (`request.auth != null`) 可讀寫」，與先前
+//      `/{document=**}` 行為一致，避免一次收緊把所有客戶端打壞。
+//   2. 【分區】請往檔尾看：
+//        `_web_mirror/{document=**}`   —— 計畫中僅網頁／或先在此放 Web 獨資料
+//        `_android_mirror/{document=**}` —— 計畫中僅 Android／或先在此放 App 獨資料
+//      Dart 對應常數：[FirestorePaths.webMirrorRoot]、[FirestorePaths.androidMirrorRoot]
+//      新路徑可只寫入其中一桶，並在對應 `match` 單獨改 `allow`（另一桶不受影響）。
+//   3. 【更嚴格區分身分】Firestore 規則無法直接知道「請求來自網頁或 App」；若要同一集合
+//      對 Web／Android 不同權限，需由後端發 **Custom Claims**（如 `platform`），再在規則裡用
+//      `request.auth.token.platform` 判斷（Blaze／Cloud Functions）。
 //
-// [UserFirestoreService.ensureUserProfile]／[seedPublicProfileIfMissing] 對
-// **`users/{目前登入者的 uid}`** 做 merge/set；規則必須在 **已有 Auth** 時允許該路徑寫入。
+// ⚠️ 規則以本檔為準；部署：firebase deploy --only firestore:rules --project <專案>
 //
-// ── 現行策略 ──
-// 下方 `/{document=**}` 對 **任一已登入使用者**（`request.auth != null`）放行**讀、寫**，
-// 因此已包含：**可 set 自己的 `users/{yourUid}`**，以及探索頁讀他人 `users` 等現有行為。
-//
-// ⚠️ 若 Firebase Console「規則」與本檔不同，Android 可能被拒寫而入失敗。**請將本檔部署上雲後再測**：
-//   firebase deploy --only firestore:rules
-//
-// 正式上線前應視需求改為「依集合分拆授權」，勿長期全站對所有登入者可寫任何路徑。
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 共用業務資料（現行 Flutter Web + Android 皆使用；之後可按集合拆細權限）
+    // ═══════════════════════════════════════════════════════════════
+
+    match /users/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /likes/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /chat_invitations/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /conversations/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /activities/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /matches/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /subscriptions/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /payments/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /notifications/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /public_feed_posts/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /feed_moderation_pending/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /feed_post_reports/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /feed_post_hearts/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /admin_accounts/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /user_blacklist/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /subscription_orders/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /upgrade_matching_pool/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /match_admin_settings/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /event_cms/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /payment_report_settings/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /payment_settings/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /event_proposals/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /ad_partner_requests/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /admin_notify_outbox/{document=**} {
+      allow read, write: if signedIn();
+    }
+    match /_counters/{document=**} {
+      allow read, write: if signedIn();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Web 專用資料樹：僅規則層級分區；Dart 側請用 [FirestorePaths.webMirrorRoot]
+    // 可依需要改為只允許自訂 Claims、或縮小為僅特定子路徑可寫。
+    // ═══════════════════════════════════════════════════════════════
+    match /_web_mirror/{document=**} {
+      allow read, write: if signedIn();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Android 專用資料樹：[FirestorePaths.androidMirrorRoot]
+    // ═══════════════════════════════════════════════════════════════
+    match /_android_mirror/{document=**} {
+      allow read, write: if signedIn();
+    }
+
+    // ── 其餘未列名路徑（相容舊客戶端／避免漏網）；上線請改 false 並補齊 match ──
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if signedIn();
     }
   }
 }

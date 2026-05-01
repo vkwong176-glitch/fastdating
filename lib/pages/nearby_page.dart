@@ -27,9 +27,8 @@ import '../widgets/main_tab_app_bar.dart';
 import '../widgets/pressable_opacity.dart';
 import '../widgets/chat_quota_gate.dart';
 import '../services/firebase_bootstrap.dart';
-import 'chat_detail_page.dart';
 
-/// 附近的人：篩選出來、可按入進入對話
+/// 附近的人：僅能以「邀請聊天」發起聯繫；列表卡片不進入一對一訊息頁。
 class NearbyPage extends StatefulWidget {
   const NearbyPage({super.key});
 
@@ -649,7 +648,10 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
       if (!mounted) return;
       if (!sent) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('雙方已配對，可直接按入卡片進入聊天')),
+          const SnackBar(
+            content:
+                Text('雙方已配對，請至底部「訊息」分頁開啟與對方聊天'),
+          ),
         );
         return;
       }
@@ -934,41 +936,7 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
                             const secondaryBoost =
                                 0.1 * AppConstants.logicalPxPerCm;
                             final nameBoost = isMobile ? secondaryBoost : 0.0;
-                            return InkWell(
-                              enableFeedback: false,
-                              onTap: () async {
-                                final auth = Provider.of<AuthProvider>(
-                                  context,
-                                  listen: false,
-                                );
-                                final me = auth.uid;
-                                if (FirebaseBootstrap.isReady &&
-                                    me != null &&
-                                    userId.length >= 20 &&
-                                    !await ensureMessagingThreadAllowed(
-                                      context,
-                                      myUid: me,
-                                      peerUserId: userId,
-                                    )) {
-                                  return;
-                                }
-                                if (!context.mounted) return;
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => ChatDetailPage(
-                                      userId: userId,
-                                      name: name,
-                                      avatar: avatar.isNotEmpty
-                                          ? avatar
-                                          : 'https://picsum.photos/seed/nearby_default/100/100',
-                                    ),
-                                  ),
-                                );
-                              },
-                              borderRadius: BorderRadius.circular(
-                                  AppConstants.cardRadius),
-                              child: Container(
+                            return Container(
                                 margin: const EdgeInsets.only(bottom: 12),
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
@@ -1087,14 +1055,9 @@ class _NearbyPageState extends State<NearbyPage> with WidgetsBindingObserver {
                                         ],
                                       ),
                                     ),
-                                    const Icon(
-                                      Icons.chevron_right,
-                                      color: Colors.black,
-                                    ),
                                   ],
                                 ),
-                              ),
-                            );
+                              );
                           },
                         );
                       },

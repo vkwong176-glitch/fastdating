@@ -202,26 +202,33 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
     if (auth.uid == null) return;
     final inviterUid = item['inviterUid'] as String? ?? '';
     if (inviterUid.isEmpty) return;
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     try {
-      final r = await ChatFirestoreService.instance.acceptChatInvitation(
+      await ChatQuotaService.instance.ensurePairAllowedOrThrow(
+        userIdA: auth.uid!,
+        userIdB: inviterUid,
+      );
+      final result = await ChatFirestoreService.instance.acceptChatInvitation(
         accepterUid: auth.uid!,
         inviterUid: inviterUid,
       );
       if (!mounted) return;
-      if (r == null || !r.isMutualMatch || r.conversationId == null) {
+      if (!result.isSuccess) {
+        final f = result.failure ?? AcceptInvitationFailure.unknown;
+        final key = switch (f) {
+          AcceptInvitationFailure.missing =>
+            'chat_invite_accept_failed_missing',
+          AcceptInvitationFailure.notPending =>
+            'chat_invite_accept_failed_already',
+          AcceptInvitationFailure.unknown =>
+            'chat_invite_accept_failed_unknown',
+        };
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('無法接受邀請（可能已過期）')),
+          SnackBar(content: Text(lang.getString(key))),
         );
         return;
       }
       Provider.of<NavProvider>(context, listen: false).setCurrentIndex(1);
-      if (!await ensureMessagingThreadAllowed(
-        context,
-        myUid: auth.uid!,
-        peerUserId: inviterUid,
-      )) {
-        return;
-      }
       if (!mounted) return;
       Navigator.push(
         context,
@@ -230,7 +237,7 @@ class _PublishFeedPageState extends State<PublishFeedPage> {
             userId: inviterUid,
             name: item['name'] as String? ?? '',
             avatar: item['avatar'] as String? ?? '',
-            conversationId: r.conversationId,
+            conversationId: result.conversationId,
           ),
         ),
       );

@@ -93,16 +93,50 @@ const List<String> _kGoogleOAuthScopes = <String>[
   'profile',
 ];
 
-/// Firebase Android：SHA-1 與 google-services.json 不符時最常見徵狀為「選了 Gmail 後仍無 UID」。
+/// Firebase 換證失敗時附於換證相關訊息（行動平台簡述；詳見 flutter run）。
 const String _kAndroidGoogleFirebaseMismatchHint =
-    '\n\n常見原因（網頁正常、Android 不行）：Firebase 尚未登錄「**目前建置這支 APK**」使用的簽署憑證 '
-    'SHA-1。請在 **android** 資料夾執行 `./gradlew signingReport`，將 **release**／**debug** 對應的 '
-    'SHA-1 加入 Firebase Console → Project settings → **Your apps** → Android '
-    '`com.fastdating1.app`，再下載新版 **google-services.json** 覆蓋 '
-    '`android/app/google-services.json`，最後重建安裝。';
+    '\n請稍後再試，或使用 Email／Apple 登入。';
 
 /// 登入狀態：Firebase 就緒時使用 Auth + Firestore；否則維持本機模擬（開發用）。
 class AuthProvider with ChangeNotifier {
+  /// Android：簡短；完整原因請睇控制台 log（[GoogleSignIn] / flutter run）。
+  static String _googleSignInInterruptedMessage(GoogleSignInException e) {
+    debugPrint(
+      'GoogleSignIn interrupted: code=${e.code} desc=${e.description} details=${e.details}',
+    );
+    return defaultTargetPlatform == TargetPlatform.android
+        ? 'Google 登入被中斷，請稍後再試。'
+        : 'Google 登入未完成，請稍後再試；若問題持續請檢查網絡。';
+  }
+
+  /// [canceled] 喺 Android 常夾埋 Credential Manager／授權錯誤，界面唔暴露 `[16]` 等技術字。
+  static String _googleSignInCanceledUserMessage(GoogleSignInException e) {
+    debugPrint(
+      'GoogleSignIn canceled: code=${e.code} desc=${e.description} details=${e.details}',
+    );
+    return 'Google 登入未完成，請稍後再試。';
+  }
+
+  static String _messageForMobileGoogleSignInException(
+    GoogleSignInException e,
+  ) {
+    switch (e.code) {
+      case GoogleSignInExceptionCode.canceled:
+        return _googleSignInCanceledUserMessage(e);
+      case GoogleSignInExceptionCode.interrupted:
+        return _googleSignInInterruptedMessage(e);
+      default:
+        debugPrint(
+          'GoogleSignIn: code=${e.code} desc=${e.description} details=${e.details}',
+        );
+        final d = _authNonEmpty(e.description)?.trim();
+        if (d != null && d.isNotEmpty) {
+          debugPrint('GoogleSignIn (user-visible suppressed raw): $d');
+        }
+        return 'Google 登入失敗，請稍後再試。';
+    }
+  }
+
   /// [authStateChanges] 換 provider／OAuth 時可能短暫出現 [user]==null；用世代號忽略過期的延遲清除。
   int _authStateEventGen = 0;
 
@@ -387,6 +421,16 @@ class AuthProvider with ChangeNotifier {
     } catch (err, st) {
       debugPrint('_tryHydrateCurrentAccountFromPrefs: $err\n$st');
     }
+  }
+
+  /// 從「想講～」本機草稿還原性別到 UI 與本機 prefs（不寫 Firestore，直至使用者再調整或送表單後由其他流程同步）。
+  Future<void> hydrateProfileGenderFromDraft(String raw) async {
+    final g = raw.toLowerCase().trim() == 'female' ? 'female' : 'male';
+    _genderLoadGeneration++;
+    _profileGender = g;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefsGenderKey, g);
   }
 
   /// 立即更新性別並寫入 Firestore（若已登入 Firebase）與本機快取，無需另按儲存。
@@ -727,9 +771,10 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  /// 行動裝置：初始化 Google Sign-In 並訂閱 [authenticationEvents]，補足設定頁可顯示之 Gmail。
+  /// iOS／macOS：初始化 Google Sign-In。**Android**：產品已停用 Google Sign-In，此處提早返回。
   Future<void> _ensureMobileGoogleSignInInitialized() async {
     if (kIsWeb || !FirebaseBootstrap.isReady) return;
+    if (defaultTargetPlatform == TargetPlatform.android) return;
     if (_googleMobileSignInInitialized) return;
     await GoogleSignIn.instance.initialize(
       serverClientId: DefaultFirebaseOptions.googleOAuthWebClientId,
@@ -759,7 +804,11 @@ class AuthProvider with ChangeNotifier {
 
   /// 設定頁進入時：嘗試靜默還原本機曾選過的 Google 帳戶 email（不要求互動 UI）。
   Future<void> refreshGoogleSdkAccountHintForUi() async {
-    if (kIsWeb || !FirebaseBootstrap.isReady) return;
+    if (kIsWeb ||
+        defaultTargetPlatform == TargetPlatform.android ||
+        !FirebaseBootstrap.isReady) {
+      return;
+    }
     try {
       await _ensureMobileGoogleSignInInitialized();
       final lightweightFut =
@@ -779,9 +828,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  /// Android／iOS／macOS：`google_sign_in` + Firebase [signInWithCredential]。
-  ///
-  /// Android 額外在 [invalid-credential] 時 [GoogleSignIn.signOut] 後重試一輪，並附 SHA-1 指引。
+  /// iOS／macOS：`google_sign_in` + Firebase。[invalid-credential] 等錯誤時會 [GoogleSignIn.signOut] 後重試一輪。
   Future<String?> _signInWithGoogleNativeMobile() async {
     await _ensureMobileGoogleSignInInitialized();
 
@@ -792,11 +839,7 @@ class AuthProvider with ChangeNotifier {
           scopeHint: _kGoogleOAuthScopes,
         );
       } on GoogleSignInException catch (e) {
-        if (e.code == GoogleSignInExceptionCode.canceled ||
-            e.code == GoogleSignInExceptionCode.interrupted) {
-          return null;
-        }
-        return e.description ?? e.toString();
+        return _messageForMobileGoogleSignInException(e);
       }
       final GoogleSignInAuthentication googleAuth = account.authentication;
       String? accessToken;
@@ -806,6 +849,8 @@ class AuthProvider with ChangeNotifier {
               _kGoogleOAuthScopes,
             );
         accessToken = authed?.accessToken;
+      } on GoogleSignInException catch (e) {
+        return _messageForMobileGoogleSignInException(e);
       } catch (e, st) {
         debugPrint('Google authorizationForScopes: $e\n$st');
       }
@@ -816,6 +861,8 @@ class AuthProvider with ChangeNotifier {
             _kGoogleOAuthScopes,
           );
           accessToken = authed2.accessToken;
+        } on GoogleSignInException catch (e) {
+          return _messageForMobileGoogleSignInException(e);
         } catch (e, st) {
           debugPrint('Google authorizeScopes: $e\n$st');
         }
@@ -862,6 +909,9 @@ class AuthProvider with ChangeNotifier {
               .accessToken;
           resolvedGoogleEmail =
               await _emailFromGoogleUserInfoApi(retryToken);
+        } on GoogleSignInException catch (e) {
+          debugPrint('Google post-signIn scope retry: ${_messageForMobileGoogleSignInException(e)}');
+          // Firebase 已由 credential 換證；此處只做 userinfo/email 後備，避免打斷已登入狀態。
         } catch (e, st) {
           debugPrint('Google post-signIn userinfo retry: $e\n$st');
         }
@@ -887,17 +937,15 @@ class AuthProvider with ChangeNotifier {
       } on FirebaseAuthException catch (e) {
         lastAuthErr = e;
         final retry = attempt == 0 &&
-            defaultTargetPlatform == TargetPlatform.android &&
             (e.code == 'invalid-credential' ||
                 e.code == 'user-not-found' ||
                 e.code == 'credential-already-in-use' ||
                 e.code == 'account-exists-with-different-credential');
         if (!retry) {
-          return '${_firebaseAuthMessage(e)}'
-              '${defaultTargetPlatform == TargetPlatform.android ? _kAndroidGoogleFirebaseMismatchHint : ''}';
+          return '${_firebaseAuthMessage(e)}$_kAndroidGoogleFirebaseMismatchHint';
         }
         debugPrint(
-          'signInWithGoogle: Android retry after GoogleSignIn.signOut (${e.code})',
+          'signInWithGoogle: retry after GoogleSignIn.signOut (${e.code})',
         );
         try {
           await GoogleSignIn.instance.signOut();
@@ -905,14 +953,12 @@ class AuthProvider with ChangeNotifier {
       }
     }
     if (lastAuthErr != null) {
-      return '${_firebaseAuthMessage(lastAuthErr)}'
-          '${defaultTargetPlatform == TargetPlatform.android ? _kAndroidGoogleFirebaseMismatchHint : ''}';
+      return '${_firebaseAuthMessage(lastAuthErr)}$_kAndroidGoogleFirebaseMismatchHint';
     }
     return 'Google 登入未完成，請再試一次。';
   }
 
-  /// Google 登入（Firebase Auth）。Web 優先 [signInWithPopup]（同頁完成並走 [_finalizeOAuthSignIn]）；
-  /// 僅在彈窗被阻擋時改 [signInWithRedirect]。Android／iOS／macOS 用 [google_sign_in]。
+  /// Google：Web `signInWithPopup`／redirect；Android 應用程式不提供；iOS／macOS 使用 [google_sign_in]。
   Future<String?> signInWithGoogle() async {
     if (!FirebaseBootstrap.isReady) {
       return 'Firebase 未連線，無法使用 Google 登入';
@@ -938,6 +984,7 @@ class AuthProvider with ChangeNotifier {
       } else {
         switch (defaultTargetPlatform) {
           case TargetPlatform.android:
+            return 'Android 版請使用電郵及密碼登入（應用程式未提供 Google 登入）。';
           case TargetPlatform.iOS:
           case TargetPlatform.macOS:
             return await _signInWithGoogleNativeMobile();

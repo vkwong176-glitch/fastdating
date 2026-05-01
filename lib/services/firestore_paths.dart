@@ -1,5 +1,16 @@
-/// Firestore 集合／欄位命名（與 Cloud Functions、安全規則對齊用）
+/// Firestore 集合／欄位命名（與 Cloud Functions、安全規則對齊用）。
+///
+/// **Web / Android 分桶（可選）：**  
+/// 若希望兩端寫入的資料在安全規則上可獨立收緊，可逐步把新路徑寫進
+/// [webMirrorRoot]／[androidMirrorRoot]（見 `firestore.rules` 對應 `match`），
+/// 舊有集合仍留在下方常數所列路徑，待遷移完成後再在規則裡對兩區套用不同條件
+/// （例如經 Cloud Functions 寫入 `request.auth.token.platform`）。
 abstract final class FirestorePaths {
+  /// 網頁端專用資料樹根集合（規則可與 `_android_mirror` 分開調整）。
+  static const webMirrorRoot = '_web_mirror';
+
+  /// Android（行動 App）專用資料樹根集合。
+  static const androidMirrorRoot = '_android_mirror';
   /// 會員編號序號（`memberNo`）；規則需允許已登入使用者讀寫此集合。
   static const counters = '_counters';
   static const memberSeqDoc = 'member_seq';

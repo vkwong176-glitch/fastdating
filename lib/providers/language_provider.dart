@@ -765,6 +765,11 @@ class LanguageProvider with ChangeNotifier {
     'chat_invite_popup_title': '邀聊通知',
     'chat_invite_popup_agree': '同意',
     'chat_invite_popup_reject': '拒絕',
+    'chat_invite_accept_failed_missing':
+        '找不到此邀請，可能尚未同步或被撤回，請下拉重新整理。',
+    'chat_invite_accept_failed_already':
+        '此邀請已被處理（可能已在其他裝置接受），請下拉重新整理。',
+    'chat_invite_accept_failed_unknown': '暫無法接受邀請，請稍後再試。',
   };
 
   // 簡體中文字典
@@ -1397,6 +1402,11 @@ class LanguageProvider with ChangeNotifier {
     'chat_invite_popup_title': '邀聊通知',
     'chat_invite_popup_agree': '同意',
     'chat_invite_popup_reject': '拒绝',
+    'chat_invite_accept_failed_missing':
+        '找不到此邀请，可能尚未同步或被撤回，请下拉重新载入。',
+    'chat_invite_accept_failed_already':
+        '此邀请已处理（可能已在其他设备接受），请下拉重新载入。',
+    'chat_invite_accept_failed_unknown': '无法接受邀请，请稍后再试。',
   };
 
   // 英文字典
@@ -2120,5 +2130,11 @@ class LanguageProvider with ChangeNotifier {
     'chat_invite_popup_title': 'Chat invite',
     'chat_invite_popup_agree': 'Accept',
     'chat_invite_popup_reject': 'Reject',
+    'chat_invite_accept_failed_missing':
+        'This invite was not found. Pull to refresh and try again.',
+    'chat_invite_accept_failed_already':
+        'This invite was already handled (maybe on another device). Pull to refresh.',
+    'chat_invite_accept_failed_unknown':
+        'Could not accept the invite. Please try again shortly.',
   };
 }

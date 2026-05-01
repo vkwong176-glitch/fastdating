@@ -837,24 +837,26 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     },
                   ),
           ),
-          Container(
-            padding: EdgeInsets.only(
-              left: 4,
-              right: 8,
-              top: 10,
-              bottom: 10 + chatInputBottomInset,
-            ),
-            decoration: BoxDecoration(
-              color: AppConstants.white,
-              boxShadow: [
-                BoxShadow(
-                  color: AppConstants.grey.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, -1),
-                ),
-              ],
-            ),
-            child: Row(
+          Transform.translate(
+            offset: const Offset(0, 0.15 * AppConstants.logicalPxPerCm),
+            child: Container(
+              padding: EdgeInsets.only(
+                left: 4,
+                right: 8,
+                top: 10,
+                bottom: 10 + chatInputBottomInset,
+              ),
+              decoration: BoxDecoration(
+                color: AppConstants.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppConstants.grey.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, -1),
+                  ),
+                ],
+              ),
+              child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 IconButton(
@@ -923,6 +925,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   ],
                 ),
               ],
+            ),
             ),
           ),
         ],

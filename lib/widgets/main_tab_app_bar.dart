@@ -106,24 +106,25 @@ class MainTabAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
+  /// 左上角「首頁」：須同步 [NavProvider] 與（Web）[GoRouter]。
+  ///
+  /// App 端底部導航僅呼叫 [NavProvider.setCurrentIndex]，不重設 location，故若仍為
+  /// `/home`，單獨使用 `GoRouter.go('/home')` 會是 no-op 而畫面不變。**必須先執行
+  /// [mobileFallback]**（傳入 `setCurrentIndex(0)`）。
   static VoidCallback buildReturnHomeHandler(
     BuildContext context, {
     VoidCallback? mobileFallback,
   }) {
     return () {
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      }
+      mobileFallback?.call();
       final rootContext = rootNavigatorKey.currentContext;
-      if (rootContext != null) {
+      if (rootContext != null && rootContext.mounted) {
         GoRouter.of(rootContext).go('/home');
         return;
       }
       if (context.mounted) {
         context.go('/home');
-        return;
       }
-      mobileFallback?.call();
     };
   }
 

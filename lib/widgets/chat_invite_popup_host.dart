@@ -9,7 +9,73 @@ import '../providers/nav_provider.dart';
 import '../services/chat_firestore_service.dart';
 import '../services/chat_quota_service.dart';
 import '../services/firebase_bootstrap.dart';
+import '../pages/chat_detail_page.dart';
 import 'chat_quota_gate.dart';
+
+/// 邀聊彈窗：8 秒內未按接受／拒絕則自動關閉，邀請仍為 pending（至「邀聊訊息」列表）。
+class _ChatInvitePopupDialog extends StatefulWidget {
+  const _ChatInvitePopupDialog({
+    required this.title,
+    required this.body,
+    required this.rejectLabel,
+    required this.agreeLabel,
+  });
+
+  final String title;
+  final String body;
+  final String rejectLabel;
+  final String agreeLabel;
+
+  @override
+  State<_ChatInvitePopupDialog> createState() => _ChatInvitePopupDialogState();
+}
+
+class _ChatInvitePopupDialogState extends State<_ChatInvitePopupDialog> {
+  static const Duration _autoCloseAfter = Duration(seconds: 8);
+
+  Timer? _autoClose;
+
+  @override
+  void initState() {
+    super.initState();
+    _autoClose = Timer(_autoCloseAfter, () {
+      if (!mounted) return;
+      Navigator.of(context).pop(null);
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoClose?.cancel();
+    super.dispose();
+  }
+
+  void _popWith(bool? value) {
+    _autoClose?.cancel();
+    Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: AlertDialog(
+        title: Text(widget.title),
+        content: Text(widget.body),
+        actions: [
+          TextButton(
+            onPressed: () => _popWith(false),
+            child: Text(widget.rejectLabel),
+          ),
+          FilledButton(
+            onPressed: () => _popWith(true),
+            child: Text(widget.agreeLabel),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 /// 全域監聽待處理邀聊；有新內容時即時彈窗提醒會員查看。
 class ChatInvitePopupHost extends StatefulWidget {
@@ -80,48 +146,69 @@ class _ChatInvitePopupHostState extends State<ChatInvitePopupHost> {
 
     final agree = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(lang.getString('chat_invite_popup_title')),
-        content: Text('$name\n$text'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(lang.getString('chat_invite_popup_reject')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(lang.getString('chat_invite_popup_agree')),
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (_) => _ChatInvitePopupDialog(
+        title: lang.getString('chat_invite_popup_title'),
+        body: '$name\n$text',
+        rejectLabel: lang.getString('chat_invite_popup_reject'),
+        agreeLabel: lang.getString('chat_invite_popup_agree'),
       ),
     );
     if (!mounted) return;
+    // 逾時未按鈕：agree == null，邀請仍為 pending，導向「邀聊通知」分頁。
+    if (agree == null) {
+      context.read<NavProvider>().setCurrentIndex(2);
+    }
     final auth = context.read<AuthProvider>();
     final myUid = auth.uid;
     if (myUid != null && inviterUid.isNotEmpty) {
       try {
         if (agree == true) {
+          await ChatQuotaService.instance.ensurePairAllowedOrThrow(
+            userIdA: myUid,
+            userIdB: inviterUid,
+          );
           final result =
               await ChatFirestoreService.instance.acceptChatInvitation(
             accepterUid: myUid,
             inviterUid: inviterUid,
           );
           if (!mounted) return;
-          if (result == null || !result.isMutualMatch || result.conversationId == null) {
+          if (!result.isSuccess) {
+            final failure = result.failure ?? AcceptInvitationFailure.unknown;
+            final key = switch (failure) {
+              AcceptInvitationFailure.missing =>
+                'chat_invite_accept_failed_missing',
+              AcceptInvitationFailure.notPending =>
+                'chat_invite_accept_failed_already',
+              AcceptInvitationFailure.unknown =>
+                'chat_invite_accept_failed_unknown',
+            };
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('無法接受邀請（可能已過期）')),
+              SnackBar(content: Text(lang.getString(key))),
             );
           } else {
-            // 只切到訊息分頁；勿自動開啟一對一聊天頁。ChatDetailPage 會在載入對話時
-            // 標記對方訊息為已讀；接受邀請本身不得觸發已讀（會員須自行按入該對話）。
             context.read<NavProvider>().setCurrentIndex(1);
+            if (!mounted) return;
+            final avatar = item['avatar'] as String? ?? '';
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => ChatDetailPage(
+                  userId: inviterUid,
+                  name: name,
+                  avatar: avatar,
+                  conversationId: result.conversationId,
+                ),
+              ),
+            );
           }
-        } else {
+        } else if (agree == false) {
           await ChatFirestoreService.instance.declineChatInvitation(
             accepterUid: myUid,
             inviterUid: inviterUid,
           );
         }
+        // agree == null：逾時關閉；不可當作拒絕刪除邀請
       } on ChatQuotaExceededException {
         if (mounted) {
           await showChatQuotaPaywallDialog(context);

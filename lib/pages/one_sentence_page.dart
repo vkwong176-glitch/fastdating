@@ -17,6 +17,7 @@ import '../router/app_router.dart';
 import '../services/firebase_bootstrap.dart';
 import '../services/firestore_paths.dart';
 import '../services/feed_firestore_service.dart';
+import '../services/talking_form_draft_store.dart';
 import '../utils/hk_time_format.dart';
 import '../services/user_firestore_service.dart';
 import '../utils/interests_parse.dart';
@@ -24,8 +25,6 @@ import '../services/screen_capture_platform.dart';
 import '../utils/content_moderation.dart';
 import '../utils/avatar_field.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'settings_page.dart';
-import 'activity_page.dart';
 
 /// 發布頁：選圖、一句話、標籤、顯示性別、顯示在 Fast Dating
 class OneSentencePage extends StatefulWidget {
@@ -56,13 +55,109 @@ class _OneSentencePageState extends State<OneSentencePage>
 
   bool _savingAvatar = false;
 
+  bool _talkingDraftListenersAttached = false;
+  Timer? _draftSaveTimer;
+
+  void _scheduleTalkingDraftDebouncedSave() {
+    _draftSaveTimer?.cancel();
+    _draftSaveTimer = Timer(const Duration(milliseconds: 500), () {
+      unawaited(_persistTalkingDraftSnapshot());
+    });
+  }
+
+  static String _draftAccountKey() =>
+      FirebaseAuth.instance.currentUser?.uid ?? 'guest';
+
+  Future<void> _persistTalkingDraftSnapshot() async {
+    if (!mounted) return;
+    try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      Uint8List? avatarBytes;
+      if (_pickedImage != null) {
+        try {
+          avatarBytes = await _pickedImage!.readAsBytes();
+        } catch (_) {}
+      }
+      avatarBytes ??= _avatarBytesFromFirestore;
+
+      await TalkingFormDraftStore.save(
+        _draftAccountKey(),
+        displayName: _callNameController.text,
+        age: _ageController.text,
+        interests: _interestController.text,
+        job: _jobController.text,
+        tagsPlain: List<String>.from(_tags),
+        tagSelfInputDraft: _tagController.text,
+        showGenderOn: _showGenderOn,
+        showOnPlatform: _showInHkLoveEasyOn,
+        gender: auth.profileGender,
+        avatarBytes: avatarBytes,
+      );
+    } catch (e, st) {
+      debugPrint('_persistTalkingDraftSnapshot: $e\n$st');
+    }
+  }
+
+  Future<void> _applyTalkingDraftOverlay() async {
+    final key = _draftAccountKey();
+    final fields = await TalkingFormDraftStore.loadFields(key);
+    final avatarBytes = await TalkingFormDraftStore.loadAvatar(key);
+    if (!mounted) return;
+    if (fields == null && (avatarBytes == null || avatarBytes.isEmpty)) {
+      return;
+    }
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (fields != null) {
+      await auth.hydrateProfileGenderFromDraft(fields.gender);
+    }
+    if (!mounted) return;
+    setState(() {
+      if (fields != null) {
+        _callNameController.text = fields.displayName;
+        _ageController.text = fields.age;
+        _interestController.text = fields.interests;
+        _jobController.text = fields.job;
+        _tagController.text = fields.tagSelfInputDraft;
+        _tags
+          ..clear()
+          ..addAll(fields.tagsPlain);
+        _showGenderOn = fields.showGenderOn;
+        _showInHkLoveEasyOn = fields.showOnPlatform;
+      }
+      if (avatarBytes != null && avatarBytes.isNotEmpty) {
+        _pickedImage = null;
+        _avatarBytesFromFirestore = avatarBytes;
+      }
+    });
+  }
+
+  void _attachTalkingDraftAutoSaveListeners() {
+    if (_talkingDraftListenersAttached) return;
+    _talkingDraftListenersAttached = true;
+    _callNameController.addListener(_scheduleTalkingDraftDebouncedSave);
+    _ageController.addListener(_scheduleTalkingDraftDebouncedSave);
+    _jobController.addListener(_scheduleTalkingDraftDebouncedSave);
+    _interestController.addListener(_scheduleTalkingDraftDebouncedSave);
+    _tagController.addListener(_scheduleTalkingDraftDebouncedSave);
+  }
+
+  Future<void> _hydrateTalkingForm() async {
+    if (!mounted) return;
+    await _loadUserFieldsFromFirestore();
+    await _applyTalkingDraftOverlay();
+    if (!mounted) return;
+    _sentenceController.clear();
+    _attachTalkingDraftAutoSaveListeners();
+    unawaited(_persistTalkingDraftSnapshot());
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ScreenCapturePlatform.allowScreenshots();
-      _loadUserFieldsFromFirestore();
+      unawaited(_hydrateTalkingForm());
     });
   }
 
@@ -101,10 +196,6 @@ class _OneSentencePageState extends State<OneSentencePage>
         if (j != null && j.isNotEmpty && j != '未填寫') {
           _jobController.text = j;
         }
-        final s = (d['sentence'] as String?)?.trim();
-        if (s != null && s.isNotEmpty && s != kDiscoverDefaultSentence) {
-          _sentenceController.text = s;
-        }
         final av = (d['avatar'] as String?)?.trim();
         if (av != null && avatarFieldIsDataUrl(av)) {
           _avatarBytesFromFirestore = decodeAvatarFieldToBytes(av);
@@ -124,6 +215,7 @@ class _OneSentencePageState extends State<OneSentencePage>
       setState(() {
         _avatarBytesFromFirestore = Uint8List.fromList(bytes);
       });
+      unawaited(_persistTalkingDraftSnapshot());
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('已儲存大頭照，訊息列表將同步顯示')),
       );
@@ -140,6 +232,15 @@ class _OneSentencePageState extends State<OneSentencePage>
 
   @override
   void dispose() {
+    _draftSaveTimer?.cancel();
+    if (_talkingDraftListenersAttached) {
+      _callNameController.removeListener(_scheduleTalkingDraftDebouncedSave);
+      _ageController.removeListener(_scheduleTalkingDraftDebouncedSave);
+      _jobController.removeListener(_scheduleTalkingDraftDebouncedSave);
+      _interestController.removeListener(_scheduleTalkingDraftDebouncedSave);
+      _tagController.removeListener(_scheduleTalkingDraftDebouncedSave);
+      _talkingDraftListenersAttached = false;
+    }
     WidgetsBinding.instance.removeObserver(this);
     _callNameController.dispose();
     _ageController.dispose();
@@ -172,6 +273,7 @@ class _OneSentencePageState extends State<OneSentencePage>
           _pickedImage = file;
           _loadingImage = false;
         });
+        _scheduleTalkingDraftDebouncedSave();
       } else {
         setState(() => _loadingImage = false);
       }
@@ -192,11 +294,13 @@ class _OneSentencePageState extends State<OneSentencePage>
         _tags.add(t);
         _tagController.clear();
       });
+      _scheduleTalkingDraftDebouncedSave();
     }
   }
 
   void _removeTag(String tag) {
     setState(() => _tags.remove(tag));
+    _scheduleTalkingDraftDebouncedSave();
   }
 
   Widget _buildToggleRow({
@@ -318,13 +422,17 @@ class _OneSentencePageState extends State<OneSentencePage>
                   onValueChanged: (String? value) {
                     if (value == null) return;
                     unawaited(auth.setProfileGender(value));
+                    _scheduleTalkingDraftDebouncedSave();
                   },
                 ),
               ),
             ),
             Switch(
               value: _showGenderOn,
-              onChanged: (v) => setState(() => _showGenderOn = v),
+              onChanged: (v) {
+                setState(() => _showGenderOn = v);
+                _scheduleTalkingDraftDebouncedSave();
+              },
               activeColor: const Color(0xFF26A69A),
             ),
           ],
@@ -724,7 +832,10 @@ class _OneSentencePageState extends State<OneSentencePage>
                   _buildToggleRow(
                     title: '將我顯示在 Fast Dating',
                     value: _showInHkLoveEasyOn,
-                    onChanged: (v) => setState(() => _showInHkLoveEasyOn = v),
+                    onChanged: (v) {
+                      setState(() => _showInHkLoveEasyOn = v);
+                      _scheduleTalkingDraftDebouncedSave();
+                    },
                     titleFontSize: toggleTitleFs,
                     subtitleFontSize: toggleSubtitleFs,
                   ),
@@ -964,6 +1075,9 @@ class _OneSentencePageState extends State<OneSentencePage>
                     _syncInterestsToFilter();
                     feed.addLocalPost(post);
                   }
+                  if (!context.mounted) return;
+                  _sentenceController.clear();
+                  await _persistTalkingDraftSnapshot();
                   if (!context.mounted) return;
                   Provider.of<NavProvider>(context, listen: false)
                       .setCurrentIndex(0);
@@ -1259,7 +1373,10 @@ class _OneSentencePageState extends State<OneSentencePage>
               style: IconButton.styleFrom(
                 backgroundColor: Colors.black45,
               ),
-              onPressed: () => setState(() => _pickedImage = null),
+              onPressed: () {
+                setState(() => _pickedImage = null);
+                _scheduleTalkingDraftDebouncedSave();
+              },
             ),
           ),
         ],

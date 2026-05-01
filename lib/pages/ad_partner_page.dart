@@ -601,38 +601,7 @@ class _AdPartnerPageState extends State<AdPartnerPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-            // 心形＋對話氣泡圖標
-            Center(
-              child: Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFB6C1).withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(40),
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Icon(Icons.favorite,
-                        color: AppConstants.primaryColor, size: 36 + bf * 0.35),
-                    Positioned(
-                      bottom: 12,
-                      left: 14,
-                      child: Icon(Icons.chat_bubble,
-                          color: const Color(0xFFE57373), size: 18 + bf * 0.25),
-                    ),
-                    Positioned(
-                      bottom: 12,
-                      right: 14,
-                      child: Icon(Icons.chat_bubble,
-                          color: const Color(0xFF64B5F6), size: 18 + bf * 0.25),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Text(
               langProvider.getString('ad_fee_plan_title'),
               textAlign: TextAlign.center,

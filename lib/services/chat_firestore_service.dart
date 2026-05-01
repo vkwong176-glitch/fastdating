@@ -169,12 +169,14 @@ class ChatFirestoreService {
   }
 
   /// B 接受 A 的邀請 → 互配、建立對話，並在同一交易內為雙方計入當日免費「不同對象」名額（未訂閱者）。
-  /// 若任一方已滿兩位名額，拋 [ChatQuotaExceededException]；邀請不存在或非 pending 則回傳 null。
-  Future<LikePeerResult?> acceptChatInvitation({
+  /// 若任一方已滿兩位名額，拋 [ChatQuotaExceededException]；否則見 [AcceptInvitationResult.failure]。
+  Future<AcceptInvitationResult> acceptChatInvitation({
     required String accepterUid,
     required String inviterUid,
   }) async {
-    if (!FirebaseBootstrap.isReady) return null;
+    if (!FirebaseBootstrap.isReady) {
+      return AcceptInvitationResult.failure(AcceptInvitationFailure.unknown);
+    }
     final docId = _likeDocId(inviterUid, accepterUid);
     final inviteRef =
         _db.collection(FirestorePaths.chatInvitations).doc(docId);
@@ -258,18 +260,21 @@ class ChatFirestoreService {
 
         return cidInner;
       });
-      return LikePeerResult.mutual(conversationId: cid);
+      return AcceptInvitationResult.success(cid);
     } on ChatQuotaExceededException {
       rethrow;
     } on StateError catch (e) {
-      if (e.message == 'invite_missing' ||
-          e.message == 'invite_not_pending') {
-        return null;
+      if (e.message == 'invite_missing') {
+        return AcceptInvitationResult.failure(AcceptInvitationFailure.missing);
       }
-      rethrow;
+      if (e.message == 'invite_not_pending') {
+        return AcceptInvitationResult.failure(
+            AcceptInvitationFailure.notPending);
+      }
+      return AcceptInvitationResult.failure(AcceptInvitationFailure.unknown);
     } catch (e, st) {
       debugPrint('acceptChatInvitation $e\n$st');
-      return null;
+      return AcceptInvitationResult.failure(AcceptInvitationFailure.unknown);
     }
   }
 
@@ -298,30 +303,57 @@ class ChatFirestoreService {
         .where('toUid', isEqualTo: myUid)
         .snapshots()
         .asyncMap((snap) async {
-      final out = <Map<String, dynamic>>[];
-      for (final d in snap.docs) {
-        final data = d.data();
-        if (data['status'] != 'pending') continue;
-        final fromUid = data['fromUid'] as String?;
-        if (fromUid == null || fromUid.isEmpty) continue;
-        final userSnap =
-            await _db.collection(FirestorePaths.users).doc(fromUid).get();
-        final u = userSnap.data();
-        final msg = (data['message'] as String?)?.trim();
-        out.add({
-          'invitationDocId': d.id,
-          'inviterUid': fromUid,
-          'name': (u?['displayName'] as String?)?.trim().isNotEmpty == true
-              ? u!['displayName'] as String
-              : '會員',
-          'avatar': (u?['avatar'] as String?)?.trim() ?? '',
-          // 預設文案與 [LanguageProvider.chat_invite_interest_body] 一致（列表以「暱稱：提示」顯示）
-          'text': (msg != null && msg.isNotEmpty)
-              ? msg
-              : '有人對你的資料有興趣，想與對方聊天嗎？',
-        });
+      try {
+        final docs = List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(
+          snap.docs,
+        );
+        int msFromDoc(QueryDocumentSnapshot<Map<String, dynamic>> d) {
+          final c = d.data()['createdAt'];
+          if (c is Timestamp) return c.millisecondsSinceEpoch;
+          return 0;
+        }
+        docs.sort((a, b) => msFromDoc(b).compareTo(msFromDoc(a)));
+
+        final out = <Map<String, dynamic>>[];
+        for (final d in docs) {
+          try {
+            final data = d.data();
+            if (data['status'] != 'pending') continue;
+            final fromUid = data['fromUid'] as String?;
+            if (fromUid == null || fromUid.isEmpty) continue;
+
+            Map<String, dynamic>? u;
+            try {
+              final userSnap = await _db
+                  .collection(FirestorePaths.users)
+                  .doc(fromUid)
+                  .get();
+              u = userSnap.data();
+            } catch (_, __) {
+              u = null;
+            }
+            final msg = (data['message'] as String?)?.trim();
+            out.add({
+              'invitationDocId': d.id,
+              'inviterUid': fromUid,
+              'name': (u?['displayName'] as String?)?.trim().isNotEmpty == true
+                  ? u!['displayName'] as String
+                  : '會員',
+              'avatar': (u?['avatar'] as String?)?.trim() ?? '',
+              // 預設文案與 [LanguageProvider.chat_invite_interest_body] 一致（列表以「暱稱：提示」顯示）
+              'text': (msg != null && msg.isNotEmpty)
+                  ? msg
+                  : '有人對你的資料有興趣，想與對方聊天嗎？',
+            });
+          } catch (e, st) {
+            debugPrint('watchIncomingInvitations row ${d.id}: $e\n$st');
+          }
+        }
+        return out;
+      } catch (e, st) {
+        debugPrint('watchIncomingInvitations: $e\n$st');
+        return <Map<String, dynamic>>[];
       }
-      return out;
     });
   }
 
@@ -656,6 +688,32 @@ class ChatFirestoreService {
     }
     if (n > 0) await batch.commit();
   }
+}
+
+enum AcceptInvitationFailure { missing, notPending, unknown }
+
+/// 邀聊「接受」寫入結果。[ChatQuotaExceededException] 仍由交易內擲出，不在此類表示。
+class AcceptInvitationResult {
+  const AcceptInvitationResult._({
+    required this.ok,
+    this.conversationId,
+    this.failure,
+  });
+
+  final bool ok;
+  final String? conversationId;
+  final AcceptInvitationFailure? failure;
+
+  bool get isSuccess =>
+      ok &&
+      conversationId != null &&
+      conversationId!.isNotEmpty;
+
+  factory AcceptInvitationResult.success(String id) =>
+      AcceptInvitationResult._(ok: true, conversationId: id, failure: null);
+
+  factory AcceptInvitationResult.failure(AcceptInvitationFailure f) =>
+      AcceptInvitationResult._(ok: false, conversationId: null, failure: f);
 }
 
 class LikePeerResult {

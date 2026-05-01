@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -114,6 +115,18 @@ Future<void> showManualPaymentCheckoutSheet(
           const gapHintToUpload = 10.0;
           final gapTotal = gapBankToHint + gapHintToUpload;
           final liftReceiptApplied = math.min(liftReceiptTarget, gapTotal);
+          /// App／原生：縮小 30%；Web 版面維持原尺寸。
+          final manualReceiptFooterScale = kIsWeb ? 1.0 : 0.7;
+          /// 提交按鈕上移 0.15cm（僅原生；Web 為 0）
+          final submitLiftY = kIsWeb
+              ? 0.0
+              : (-0.15 * AppConstants.logicalPxPerCm);
+          final double waLogoSide = 100 * manualReceiptFooterScale;
+          final double waFallbackIconSize = 52 * manualReceiptFooterScale;
+          final double submitBtnPaddingV = 14 * manualReceiptFooterScale;
+          final double submitFontSize =
+              (16 + sheetFsBoost) * manualReceiptFooterScale;
+          final double submitProgressBox = 22 * manualReceiptFooterScale;
           return Padding(
             padding: EdgeInsets.only(
               left: 16,
@@ -307,7 +320,7 @@ Future<void> showManualPaymentCheckoutSheet(
                         color: Colors.transparent,
                         borderRadius: BorderRadius.circular(16),
                         clipBehavior: Clip.antiAlias,
-                        child: InkWell(
+                            child: InkWell(
                           enableFeedback: false,
                           onTap:
                               submitting ? null : () => launchWhatsApp(context),
@@ -315,15 +328,15 @@ Future<void> showManualPaymentCheckoutSheet(
                             borderRadius: BorderRadius.circular(16),
                             child: Image.asset(
                               'assets/images/whatsapp_logo.png',
-                              width: 100,
-                              height: 100,
+                              width: waLogoSide,
+                              height: waLogoSide,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) =>
                                   ColoredBox(
                                 color: const Color(0xFF25D366),
                                 child: Icon(
                                   Icons.chat_bubble_rounded,
-                                  size: 52,
+                                  size: waFallbackIconSize,
                                   color: Colors.white.withValues(alpha: 0.95),
                                 ),
                               ),
@@ -334,77 +347,80 @@ Future<void> showManualPaymentCheckoutSheet(
                     ),
                   ),
                   const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: submitting
-                        ? null
-                        : () async {
-                            setModal(() => submitting = true);
-                            try {
-                              final orderId =
-                                  await SubscriptionOrderService.recordOrder(
-                                planName: planName,
-                                months: months,
-                                totalPrice: totalPrice,
-                                fastDatingPlan: fastDatingPlan,
-                                paymentMethod: 'manual_fps_wechat_bank',
-                                purchaseKind: purchaseKind,
-                                status: 'pending_receipt_review',
-                                activityId: activityId,
-                                activitySummary: activitySummary,
-                                adFeePlanSnapshot: adFeePlanSnapshot,
-                              );
-                              if (orderId == null) {
-                                throw StateError('subscription_order_auth');
-                              }
-                              onOrderIdCreated?.call(orderId);
-                              onOrderSubmitted?.call();
-                              if (!context.mounted) return;
-                              Navigator.pop(ctx);
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(successSnackBar)),
-                              );
-                            } catch (e) {
-                              if (context.mounted) {
-                                final msg = e.toString().contains(
-                                          'subscription_order_auth',
-                                        )
-                                    ? '無法建立訂單：請確認已登入或網路正常'
-                                    : '提交失敗：$e';
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(msg)),
+                  Transform.translate(
+                    offset: Offset(0, submitLiftY),
+                    child: FilledButton(
+                      onPressed: submitting
+                          ? null
+                          : () async {
+                              setModal(() => submitting = true);
+                              try {
+                                final orderId =
+                                    await SubscriptionOrderService.recordOrder(
+                                  planName: planName,
+                                  months: months,
+                                  totalPrice: totalPrice,
+                                  fastDatingPlan: fastDatingPlan,
+                                  paymentMethod: 'manual_fps_wechat_bank',
+                                  purchaseKind: purchaseKind,
+                                  status: 'pending_receipt_review',
+                                  activityId: activityId,
+                                  activitySummary: activitySummary,
+                                  adFeePlanSnapshot: adFeePlanSnapshot,
                                 );
+                                if (orderId == null) {
+                                  throw StateError('subscription_order_auth');
+                                }
+                                onOrderIdCreated?.call(orderId);
+                                onOrderSubmitted?.call();
+                                if (!context.mounted) return;
+                                Navigator.pop(ctx);
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(successSnackBar)),
+                                );
+                              } catch (e) {
+                                if (context.mounted) {
+                                  final msg =
+                                      e.toString().contains('subscription_order_auth')
+                                          ? '無法建立訂單：請確認已登入或網路正常'
+                                          : '提交失敗：$e';
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(msg)),
+                                  );
+                                }
+                              } finally {
+                                if (context.mounted) {
+                                  setModal(() => submitting = false);
+                                }
                               }
-                            } finally {
-                              if (context.mounted) {
-                                setModal(() => submitting = false);
-                              }
-                            }
-                          },
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.orange.shade200,
-                      disabledForegroundColor: Colors.white70,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                            },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: Colors.orange.shade200,
+                        disabledForegroundColor: Colors.white70,
+                        padding:
+                            EdgeInsets.symmetric(vertical: submitBtnPaddingV),
+                      ),
+                      child: submitting
+                          ? SizedBox(
+                              height: submitProgressBox,
+                              width: submitProgressBox,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2 * manualReceiptFooterScale,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              '提交',
+                              style: TextStyle(
+                                fontSize: submitFontSize,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
                     ),
-                    child: submitting
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            '提交',
-                            style: TextStyle(
-                              fontSize: 16 + sheetFsBoost,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
                   ),
                 ],
               ),

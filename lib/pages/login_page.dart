@@ -22,7 +22,7 @@ import 'admin_login_page.dart';
 
 /// 登入頁（依手機版設計）
 /// 上：日落漸層 + 紅心與雙人剪影 + 「HK LOVE EASY」（Cinzel 羅馬顯示體、黑字）
-/// 下：米白表單（Email、Password、Sign In、Google）、響應式手機 / iPad / 電腦
+/// 下：米白表單（Email、Password、Sign In、視平台嘅第三方／Google）、響應式手機 / iPad / 電腦
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -84,8 +84,9 @@ class _LoginPageState extends State<LoginPage> {
 
     final String msg;
     if (u != null && u.isAnonymous) {
-      msg =
-          '目前為 Firebase 訪客（匿名）工作階段，請改用 Google 或 Email／密碼完成會員登入。';
+      msg = defaultTargetPlatform == TargetPlatform.android
+          ? '目前為 Firebase 訪客（匿名）工作階段，請改用 Email／密碼完成會員登入。'
+          : '目前為 Firebase 訪客（匿名）工作階段，請改用 Google 或 Email／密碼完成會員登入。';
     } else if (lastStepWasOAuth) {
       msg = '未取得 Firebase 會員身分。請在 Google／Apple 畫面上完成選帳號並同意授權；若你已關閉視窗，請再試一次。'
           '若仍失敗，請確認 APK 為最新並已完整解除安裝後重裝，且在 Firebase 專案登記 ./gradlew signingReport 對應的 SHA-1。';
@@ -98,7 +99,7 @@ class _LoginPageState extends State<LoginPage> {
   /// MIUI／部分 Android 換證後 [FirebaseAuth.currentUser]／[AuthProvider.isLoginMember] 會延遲半秒內才就緒。
   Future<void> _giveFirebaseMomentAfterOAuth(AuthProvider auth) async {
     if (kIsWeb || !FirebaseBootstrap.isReady) return;
-    for (var i = 0; i < 10; i++) {
+    for (var i = 0; i < 24; i++) {
       if (!mounted) return;
       auth.syncFromFirebaseAuth();
       final u = FirebaseAuth.instance.currentUser;
@@ -256,6 +257,13 @@ class _LoginPageState extends State<LoginPage> {
     return defaultTargetPlatform == TargetPlatform.iOS ||
         defaultTargetPlatform == TargetPlatform.macOS;
   }
+
+  /// Android 不提供 Google Sign-In；網頁／iOS／macOS 保留。
+  bool get _showGoogleLogin =>
+      kIsWeb || defaultTargetPlatform != TargetPlatform.android;
+
+  bool get _showThirdPartyOAuthSection =>
+      _showSignInWithApple || _showGoogleLogin;
 
   Future<void> _signInWithApple() async {
     if (_oauthBusy) return;
@@ -559,7 +567,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  /// 下區：米白圓角卡片、Email、Password、記住／註冊帳戶／忘記密碼、Sign In、Google
+  /// 下區：米白圓角卡片、Email、Password、記住／註冊／忘記密碼、Sign In、管理員、視平台第三方（Android 唔顯示 Google）。
   /// 使用 Padding + DecoratedBox 避免 Container margin 相關 assertion
   Widget _buildFormSection(Size size, bool isWide) {
     final s = _loginUiScale;
@@ -702,9 +710,11 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ],
-          SizedBox(height: 16 * s),
-          _buildDivider(),
-          SizedBox(height: 14 * s),
+          if (_showThirdPartyOAuthSection) ...[
+            SizedBox(height: 16 * s),
+            _buildDivider(),
+            SizedBox(height: 14 * s),
+          ],
           if (_showSignInWithApple) ...[
             SignInWithAppleButton(
               text: '使用 Apple 登入',
@@ -718,11 +728,12 @@ class _LoginPageState extends State<LoginPage> {
             ),
             SizedBox(height: 12 * s),
           ],
-          _buildSocialButton(
-            icon: Icons.g_mobiledata_rounded,
-            label: 'Continue with Google',
-            onPressed: _signInWithGoogle,
-          ),
+          if (_showGoogleLogin)
+            _buildSocialButton(
+              icon: Icons.g_mobiledata_rounded,
+              label: 'Continue with Google',
+              onPressed: _signInWithGoogle,
+            ),
           ],
         ),
       ),
